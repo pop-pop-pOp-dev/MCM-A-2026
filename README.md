@@ -5,7 +5,7 @@
 ## 功能概览
 - SOC / 温度 / SOH 耦合 ODE 动力学
 - 电学：OCV 曲线 + 内阻 Arrhenius + 二次方程求电流
-- 热学：I^2R + 逻辑热 + 对流散热
+- 热学：I^2R + 负载热（扣除辐射逃逸）+ 对流散热
 - 退化：循环老化 + 日历老化（Arrhenius）
 - 断电截止（V_term < V_cutoff）事件终止
 - 四类图：相图、压降分析、灵敏度热力图、功率分解
@@ -27,6 +27,40 @@ pip install -r requirements.txt
 ```bash
 python solution.py --config config.yaml
 ```
+
+## Data Sources & Parameter Estimation
+为满足“数据驱动”要求，项目引入权威公开数据集，并提供参数拟合与验证脚本。
+
+**数据集来源**
+- CALCE Battery Data (UMD): https://web.calce.umd.edu/batteries/data/
+- NASA PCoE Randomized Battery Usage (Zenodo): https://zenodo.org/records/15277374
+- Panasonic 18650PF (Mendeley Data): https://data.mendeley.com/datasets/wykht8y7tg/1
+（本地文件与下载链接索引见 `datasets/SOURCES.md`）
+
+**OCV 参数拟合**
+```bash
+python fit_params.py --ocv_csv datasets/calce_ocv/cs2_8_ocv_curve.csv
+```
+拟合结果会输出 `ocv_coeffs`，填入 `config.yaml` 的 `battery_params.ocv_coeffs`。
+
+**温度参数拟合（Ea_R / Ea_cap）**
+```bash
+python derive_params.py
+```
+默认从 Panasonic 18650PF 多温度循环数据拟合 `Ea_R` 与 `Ea_cap`，并输出拟合图到 `outputs/`。
+
+**功耗参数提取（AOSP power_profile.xml）**
+```bash
+python extract_power_profile.py --voltage 3.85
+```
+注意：AOSP 基准 profile 的 mA 值是占位符，仅用于流程演示；应替换为目标设备测量值。
+
+**随机负载验证**
+```bash
+python solution.py --config config.yaml
+```
+当 `validation.enabled: true` 且配置了 `validation.current_profile_csv`，
+程序会生成“测量电压 vs 模型电压”对比图用于验证。
 
 ## 结果输出（CSV/JSON）
 运行后会自动把每个场景的详细时间序列输出到 `output.directory`（默认 `outputs/`）。  

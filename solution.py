@@ -568,6 +568,23 @@ class Visualizer:
         plt.legend()
         plt.tight_layout()
 
+    def plot_voltage_validation(
+        self,
+        time_s: np.ndarray,
+        v_pred: np.ndarray,
+        v_meas: np.ndarray,
+        title: str,
+    ) -> None:
+        plt.figure(figsize=(7.2, 4.2))
+        t_hr = time_s / 3600.0
+        plt.plot(t_hr, v_meas, label="Measured", linewidth=2.0, alpha=0.85)
+        plt.plot(t_hr, v_pred, label="Model", linewidth=2.0, linestyle="--")
+        plt.xlabel("Time (h)")
+        plt.ylabel("Voltage (V)")
+        plt.title(title)
+        plt.legend()
+        plt.tight_layout()
+
     def plot_power_decomposition(self, result: SimulationResult) -> None:
         plt.figure(figsize=(7.5, 4.5))
         t_hr = result.t / 3600.0
@@ -682,6 +699,31 @@ def build_grid(cfg: Any) -> np.ndarray:
     raise ValueError("Grid config must be a list or a linspace dict.")
 
 
+def load_current_profile(path: Path) -> Dict[str, np.ndarray]:
+    data = np.genfromtxt(path, delimiter=",", names=True)
+
+    def pick(names: List[str]) -> np.ndarray:
+        for name in names:
+            if name in data.dtype.names:
+                return data[name].astype(float)
+        return np.array([])
+
+    time_s = pick(["time_s", "t_s", "time", "Time"])
+    current_a = pick(["current_a", "current", "I", "Current"])
+    voltage_v = pick(["voltage_v", "v", "V", "Voltage"])
+    temp_c = pick(["temp_c", "temperature_c", "temp", "Temperature"])
+
+    if time_s.size == 0 or current_a.size == 0:
+        raise ValueError("CSV must include time_s and current_a columns.")
+
+    return {
+        "time_s": time_s,
+        "current_a": current_a,
+        "voltage_v": voltage_v,
+        "temp_c": temp_c,
+    }
+
+
 def sample_params(
     base: BatteryParams,
     cfg: Dict[str, Any],
@@ -705,6 +747,51 @@ def sample_params(
             sample = min(sample, float(spec["max"]))
         payload[name] = sample
     return BatteryParams(**payload)
+
+
+def validate_current_profile(
+    params: BatteryParams,
+    profile_path: Path,
+    use_temp_from_csv: bool = True,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    data = load_current_profile(profile_path)
+    time_s = data["time_s"]
+    current_raw = data["current_a"]
+    voltage_meas = data["voltage_v"]
+    temp_c = data["temp_c"]
+
+    if voltage_meas.size == 0:
+        raise ValueError("CSV must include voltage_v for validation.")
+
+    current_model = current_raw.copy()
+    if np.nanmedian(current_model) < 0:
+        current_model = -current_model
+
+    physics = BatteryPhysics(params)
+    soc = np.zeros_like(time_s, dtype=float)
+    v_pred = np.zeros_like(time_s, dtype=float)
+    soc[0] = params.SOC_init
+
+    for i in range(1, len(time_s)):
+        dt = max(time_s[i] - time_s[i - 1], 0.0)
+        if use_temp_from_csv and temp_c.size == time_s.size:
+            temp_k = float(temp_c[i]) + 273.15
+        else:
+            temp_k = params.T_init
+        cap_ah = params.Q_design_ah * max(params.SOH_init, 0.05) * physics.capacity_temp_factor(temp_k)
+        soc[i] = soc[i - 1] - current_model[i] * dt / 3600.0 / max(cap_ah, 1e-9)
+        soc[i] = float(np.clip(soc[i], 0.0, 1.0))
+        r_int = physics.get_r_int(soc[i], temp_k, params.SOH_init)
+        ocv = physics.get_ocv(soc[i])
+        v_pred[i] = ocv - current_model[i] * r_int
+
+    if len(time_s) > 0:
+        temp_k0 = float(temp_c[0]) + 273.15 if (use_temp_from_csv and temp_c.size == time_s.size) else params.T_init
+        r_int0 = physics.get_r_int(soc[0], temp_k0, params.SOH_init)
+        ocv0 = physics.get_ocv(soc[0])
+        v_pred[0] = ocv0 - current_model[0] * r_int0
+
+    return time_s, v_pred, voltage_meas
 
 
 def load_yaml_config(path: Path) -> Dict[str, Any]:
@@ -788,7 +875,7 @@ def run_scenarios(config_path: str = "config.yaml") -> None:
                     wifi_state=base.wifi_state,
                     gps_state=base.gps_state,
                     charger_power=base.charger_power,
-                    eta_logic=base.eta_logic,
+                    eta_radiation=base.eta_radiation,
                 )
                 res = system.solve(scenario)
                 time_grid[i, j] = res.time_to_empty_s / 3600.0
@@ -831,6 +918,22 @@ def run_scenarios(config_path: str = "config.yaml") -> None:
         soc_p95 = np.percentile(soc_samples, 95.0, axis=0)
         viz.plot_uncertainty_band(time_grid, soc_p5, soc_p50, soc_p95, base.name)
         viz.plot_uncertainty_histogram(tte_samples, base.name)
+
+    validation = config.get("validation", {})
+    if validation.get("enabled", False):
+        data_paths = config.get("data_paths", {})
+        profile_path = validation.get("current_profile_csv") or data_paths.get("nasa_random_csv")
+        if profile_path:
+            profile_path = Path(profile_path)
+            if not profile_path.is_absolute():
+                profile_path = config_file.parent / profile_path
+            time_s, v_pred, v_meas = validate_current_profile(
+                params,
+                profile_path,
+                use_temp_from_csv=bool(validation.get("use_temp_from_csv", True)),
+            )
+            title = f"Validation: {profile_path.name}"
+            viz.plot_voltage_validation(time_s, v_pred, v_meas, title)
 
     output_cfg = config.get("output", {})
     if output_cfg.get("enabled", False):

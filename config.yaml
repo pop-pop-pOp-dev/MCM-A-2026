@@ -20,7 +20,7 @@ battery_params:
   # Internal resistance model parameters
   R_ref: 0.06               # Reference internal resistance [Ohm]
   T_ref: 298.15             # Reference temperature [K]
-  Ea_R: 18000.0             # Arrhenius activation energy [J/mol]
+  Ea_R: 27538.0             # Arrhenius activation energy [J/mol] (Panasonic fit)
   R_gas: 8.314              # Universal gas constant [J/(mol*K)]
   r_soc_coeff: 2.5          # Low-SOC resistance rise strength [-]
   r_soc_k: 7.0              # Low-SOC exponential sharpness [-]
@@ -35,7 +35,7 @@ battery_params:
   k_cal: 1.2e-9             # Calendar aging coefficient [1/s]
   Ea_cal: 50000.0           # Activation energy [J/mol]
   alpha_soc: 1.2            # SOC acceleration factor [-]
-  Ea_cap: 8000.0            # Capacity temperature dependence [J/mol]
+  Ea_cap: 10100.0           # Capacity temperature dependence [J/mol] (Panasonic fit)
 
   # KiBaM parameters
   kibam_enabled: true       # Enable KiBaM recovery dynamics
@@ -49,16 +49,16 @@ battery_params:
 
   # CPU parameters
   P_idle: 0.6               # CPU idle power [W]
-  P_little_max: 1.2         # Little cores max power [W]
-  P_big_max: 3.0            # Big cores max power [W]
+  P_little_max: 6.0         # Smartphone dataset (P_game_avg mapped to little)
+  P_big_max: 15.0           # Smartphone dataset (P_peak_cpu mapped to big)
   u_thresh: 0.45            # Threshold for big cores [-]
   T_throttle: 318.15        # Throttle midpoint temperature [K] ~ 45C
   throttle_k: 0.35          # Throttle sigmoid steepness [-]
 
   # Macro communication states
-  wifi_idle_power: 0.05     # WiFi connected idle power [W]
-  wifi_active_power: 0.3    # WiFi active transfer power [W]
-  gps_on_power: 0.5         # GPS navigation power [W]
+  wifi_idle_power: 0.1      # Recommended smartphone measured idle (~0.1W)
+  wifi_active_power: 1.5    # Recommended smartphone measured active (~1.2-1.8W)
+  gps_on_power: 0.5         # Recommended smartphone measured GPS (~0.4-0.6W)
 
   # OS feedback (low power mode)
   lpm_soc_thresh: 0.2       # SOC threshold [-]
@@ -81,7 +81,7 @@ scenarios:
     duration_s: 21600
     dt: 10
     env_temp_k: 298.15
-    eta_radiation: 0.06
+    eta_radiation: 0.03
     brightness: {type: constant, value: 0.85}
     apl: {type: constant, value: 0.7}
     cpu_util: {type: constant, value: 0.45}
@@ -93,7 +93,7 @@ scenarios:
     duration_s: 14400
     dt: 10
     env_temp_k: 300.15
-    eta_radiation: 0.05
+    eta_radiation: 0.03
     brightness: {type: constant, value: 0.95}
     apl: {type: constant, value: 0.8}
     cpu_util: {type: constant, value: 0.9}
@@ -105,7 +105,7 @@ scenarios:
     duration_s: 25200
     dt: 10
     env_temp_k: 273.15
-    eta_radiation: 0.05
+    eta_radiation: 0.03
     brightness: {type: constant, value: 0.6}
     apl: {type: constant, value: 0.6}
     cpu_util: {type: constant, value: 0.4}
@@ -138,6 +138,18 @@ uncertainty:
     R_ref: {std_frac: 0.1, min: 0.02, max: 0.15}
     Ea_R: {std_frac: 0.1, min: 8000, max: 40000}
     k_cycle: {std_frac: 0.2, min: 1.0e-7, max: 1.0e-5}
+
+data_paths:
+  calce_ocv_csv: datasets/calce_ocv/cs2_8_ocv_curve.csv
+  nasa_random_csv: datasets/nasa_random/rw17_standard.csv
+  panasonic_temp_csv: datasets/panasonic_temp/n10degC_cycle1_standard.csv
+  aging_chalmers_dir: datasets/aging_chalmers
+  aosp_power_profile_xml: datasets/aosp_power_profile/power_profile.xml
+
+validation:
+  enabled: true
+  current_profile_csv: datasets/nasa_random/rw17_standard.csv
+  use_temp_from_csv: true
 
 output:
   enabled: true

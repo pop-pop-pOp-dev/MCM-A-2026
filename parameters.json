@@ -1,0 +1,259 @@
+{
+  "battery_params": {
+    "Q_design_ah": {
+      "value": 5.0,
+      "units": "Ah",
+      "source": "smartphone_parameters_detailed.csv (2026通用推荐值, Q_design 5000 mAh)"
+    },
+    "V_cutoff": {
+      "value": 3.0,
+      "units": "V",
+      "source": "smartphone_parameters_detailed.csv (V_cutoff)"
+    },
+    "m": {
+      "value": 0.225,
+      "units": "kg",
+      "source": "smartphone_parameters_detailed.csv (m)"
+    },
+    "Cp": {
+      "value": 780.0,
+      "units": "J/(kg*K)",
+      "source": "smartphone_parameters_detailed.csv (C_p)"
+    },
+    "hA": {
+      "value": 0.275,
+      "units": "W/K",
+      "source": "smartphone_parameters_detailed.csv (h*A_surf = 11 * 0.025)"
+    },
+    "T_env": {
+      "value": 298.15,
+      "units": "K",
+      "source": "config.yaml (baseline ambient)"
+    },
+    "ocv_model": {
+      "value": "combined",
+      "units": "string",
+      "source": "config.yaml (model choice)"
+    },
+    "ocv_coeffs": {
+      "value": [
+        4.2,
+        0.02,
+        0.4,
+        0.05,
+        -0.03
+      ],
+      "units": "V",
+      "source": "fit_params.py output placeholder (update with CALCE fit)"
+    },
+    "R_ref": {
+      "value": 0.03,
+      "units": "Ohm",
+      "source": "smartphone_parameters_detailed.csv (R_ref 30 mΩ)"
+    },
+    "T_ref": {
+      "value": 298.15,
+      "units": "K",
+      "source": "config.yaml (reference temperature)"
+    },
+    "Ea_R": {
+      "value": 27538.0,
+      "units": "J/mol",
+      "source": "derive_params.py (Panasonic 18650PF multi-temp fit)"
+    },
+    "R_gas": {
+      "value": 8.314,
+      "units": "J/(mol*K)",
+      "source": "physical constant"
+    },
+    "r_soc_coeff": {
+      "value": 2.5,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "r_soc_k": {
+      "value": 7.0,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "r_soh_coeff": {
+      "value": 1.0,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "eta_coulomb_ref": {
+      "value": 0.999,
+      "units": "-",
+      "source": "smartphone_parameters_detailed.csv (eta_coulomb 99.90%)"
+    },
+    "eta_coulomb_temp_coeff": {
+      "value": 0.0008,
+      "units": "1/K",
+      "source": "model default (config.yaml)"
+    },
+    "k_cycle": {
+      "value": 1.111e-08,
+      "units": "1/(A*s)",
+      "source": "smartphone_parameters_detailed.csv (k_cycle 4e-5 1/Ah => /3600)"
+    },
+    "k_cal": {
+      "value": 1.0e-07,
+      "units": "1/s",
+      "source": "smartphone_parameters_detailed.csv (k_cal 1e-7 1/s)"
+    },
+    "Ea_cal": {
+      "value": 50000.0,
+      "units": "J/mol",
+      "source": "model default (config.yaml; OSF aging data available)"
+    },
+    "alpha_soc": {
+      "value": 1.2,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "Ea_cap": {
+      "value": 10100.0,
+      "units": "J/mol",
+      "source": "derive_params.py (Panasonic 18650PF multi-temp fit)"
+    },
+    "kibam_enabled": {
+      "value": true,
+      "units": "bool",
+      "source": "config.yaml"
+    },
+    "kibam_c": {
+      "value": 0.6,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "kibam_k": {
+      "value": 0.0003,
+      "units": "1/s",
+      "source": "model default (config.yaml)"
+    },
+    "P_max_scr": {
+      "value": 394.7368,
+      "units": "W/m^2",
+      "source": "smartphone_parameters_detailed.csv (P_max_scr 4.5 W / A_scr 0.0114 m2)"
+    },
+    "A_area": {
+      "value": 0.0114,
+      "units": "m^2",
+      "source": "smartphone_parameters_detailed.csv (A_scr 114 cm2)"
+    },
+    "gamma_scr": {
+      "value": 1.5,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "P_idle": {
+      "value": 0.1,
+      "units": "W",
+      "source": "smartphone_parameters_detailed.csv (P_idle 0.1 W)"
+    },
+    "P_little_max": {
+      "value": 6.0,
+      "units": "W",
+      "source": "smartphone_parameters_detailed.csv (P_game_avg mapped to little cluster)"
+    },
+    "P_big_max": {
+      "value": 15.0,
+      "units": "W",
+      "source": "smartphone_parameters_detailed.csv (P_peak_cpu mapped to big cluster)"
+    },
+    "u_thresh": {
+      "value": 0.45,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "T_throttle": {
+      "value": 318.15,
+      "units": "K",
+      "source": "smartphone_parameters_detailed.csv (T_thresh 45C)"
+    },
+    "throttle_k": {
+      "value": 0.35,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "wifi_idle_power": {
+      "value": 0.1,
+      "units": "W",
+      "source": "recommended smartphone measured idle (~0.1W)"
+    },
+    "wifi_active_power": {
+      "value": 1.5,
+      "units": "W",
+      "source": "recommended smartphone measured active (~1.2-1.8W)"
+    },
+    "gps_on_power": {
+      "value": 0.5,
+      "units": "W",
+      "source": "recommended smartphone measured GPS (~0.4-0.6W)"
+    },
+    "lpm_soc_thresh": {
+      "value": 0.2,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "lpm_k": {
+      "value": 20.0,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "lpm_min_factor": {
+      "value": 0.7,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "charger_efficiency": {
+      "value": 0.9,
+      "units": "-",
+      "source": "model default (config.yaml)"
+    },
+    "v_stress_thresh": {
+      "value": 4.1,
+      "units": "V",
+      "source": "model default (config.yaml)"
+    },
+    "k_stress": {
+      "value": 5.0e-10,
+      "units": "1/s",
+      "source": "model default (config.yaml)"
+    },
+    "beta_stress": {
+      "value": 12.0,
+      "units": "1/V",
+      "source": "model default (config.yaml)"
+    },
+    "SOC_init": {
+      "value": 1.0,
+      "units": "-",
+      "source": "config.yaml"
+    },
+    "T_init": {
+      "value": 298.15,
+      "units": "K",
+      "source": "config.yaml"
+    },
+    "SOH_init": {
+      "value": 1.0,
+      "units": "-",
+      "source": "config.yaml"
+    }
+  },
+  "scenario_params": {
+    "eta_radiation": {
+      "value": 0.03,
+      "units": "-",
+      "source": "assumed (SAR-based upper bound guidance)"
+    }
+  },
+  "data_paths": {
+    "calce_ocv_csv": "datasets/calce_ocv/cs2_8_ocv_curve.csv",
+    "nasa_random_csv": "datasets/nasa_random/rw17_standard.csv",
+    "panasonic_temp_csv": "datasets/panasonic_temp/n10degC_cycle1_standard.csv",
+    "aging_chalmers_dir": "datasets/aging_chalmers",
+    "aosp_power_profile_xml": "datasets/aosp_power_profile/power_profile.xml"
+  }
+}
