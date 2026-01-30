@@ -37,9 +37,6 @@ class BatteryParams:
     hA: float  # Lumped convection coefficient [W/K]
     T_env: float  # Ambient temperature [K]
 
-    # Logic efficiency (fraction of electrical power converted to useful work)
-    eta_logic: float  # Logic efficiency for non-heat fraction
-
     # OCV curve polynomial coefficients (high order to constant)
     # Typical Li-ion OCV vs SOC shape (approximate fit)
     ocv_poly: Tuple[float, ...]  # V = a*s^3 + b*s^2 + c*s + d
@@ -65,6 +62,7 @@ class BatteryParams:
     Ea_cap: float  # Activation energy for capacity temperature dependence [J/mol]
 
     # KiBaM parameters
+    kibam_enabled: bool  # Enable KiBaM recovery dynamics
     kibam_c: float  # Available charge fraction [-]
     kibam_k: float  # Diffusion rate constant [1/s]
 
@@ -122,7 +120,7 @@ class Scenario:
     wifi_state: Callable[[float], float]
     gps_state: Callable[[float], float]
     charger_power: Callable[[float], float]
-    eta_logic: float
+    eta_radiation: float
 
 
 @dataclass
@@ -263,6 +261,8 @@ class PowerSystem:
 
     def _soc_from_state(self, y1: float, temp_k: float, soh: float) -> float:
         c_total = self._capacity_total(temp_k, soh)
+        if not self.params.kibam_enabled:
+            return float(np.clip(y1 / max(c_total, 1e-6), 0.0, 1.0))
         c_available = max(self.params.kibam_c * c_total, 1e-6)
         return float(np.clip(y1 / c_available, 0.0, 1.0))
 
@@ -293,16 +293,18 @@ class PowerSystem:
         current = self._solve_current(ocv, r_int, powers["P_total"])
         v_term = ocv - current * r_int
 
-        # KiBaM dynamics (available/bound charge) with recovery effect
-        c_total = self._capacity_total(temp_k, soh_c)
-        c_available = max(self.params.kibam_c * c_total, 1e-6)
-        h1 = y1 / max(self.params.kibam_c, 1e-6)
-        h2 = y2 / max(1.0 - self.params.kibam_c, 1e-6)
-        dy1 = -current + self.params.kibam_k * (h2 - h1)
-        dy2 = -self.params.kibam_k * (h2 - h1)
+        # KiBaM dynamics (optional)
+        if self.params.kibam_enabled:
+            h1 = y1 / max(self.params.kibam_c, 1e-6)
+            h2 = y2 / max(1.0 - self.params.kibam_c, 1e-6)
+            dy1 = -current + self.params.kibam_k * (h2 - h1)
+            dy2 = -self.params.kibam_k * (h2 - h1)
+        else:
+            dy1 = -current
+            dy2 = 0.0
 
-        # Thermal dynamics (Joule + logic heat - convection)
-        p_logic_heat = powers["P_load"] * (1.0 - scenario.eta_logic)
+        # Thermal dynamics (Joule + load heat - convection)
+        p_logic_heat = powers["P_load"] * (1.0 - scenario.eta_radiation)
         p_charge_heat = powers["P_charge"] * (1.0 - self.params.charger_efficiency)
         d_temp = (
             current ** 2 * r_int
@@ -329,8 +331,12 @@ class PowerSystem:
 
     def solve(self, scenario: Scenario) -> SimulationResult:
         c_total = self._capacity_total(self.params.T_init, self.params.SOH_init)
-        y1_0 = self.params.SOC_init * (self.params.kibam_c * c_total)
-        y2_0 = self.params.SOC_init * ((1.0 - self.params.kibam_c) * c_total)
+        if self.params.kibam_enabled:
+            y1_0 = self.params.SOC_init * (self.params.kibam_c * c_total)
+            y2_0 = self.params.SOC_init * ((1.0 - self.params.kibam_c) * c_total)
+        else:
+            y1_0 = self.params.SOC_init * c_total
+            y2_0 = 0.0
         y0 = np.array([y1_0, y2_0, self.params.T_init, self.params.SOH_init], dtype=float)
         t_eval = np.arange(0.0, scenario.duration_s + scenario.dt, scenario.dt)
 
@@ -401,7 +407,7 @@ class PowerSystem:
             p_charge[i] = powers["P_charge"]
             p_total[i] = powers["P_total"]
             p_charge_heat = powers["P_charge"] * (1.0 - self.params.charger_efficiency)
-            p_heat[i] = i_cur ** 2 * r_int + p_load[i] * (1.0 - scenario.eta_logic) + p_charge_heat
+            p_heat[i] = i_cur ** 2 * r_int + p_load[i] * (1.0 - scenario.eta_radiation) + p_charge_heat
 
         voltages = {"V_term": v_term, "V_ocv": v_ocv, "I": current}
         powers = {
@@ -603,6 +609,33 @@ class Visualizer:
         plt.title("Sensitivity Heatmap: Brightness vs Ambient Temperature")
         plt.tight_layout()
 
+    def plot_uncertainty_band(
+        self,
+        t_s: np.ndarray,
+        soc_p5: np.ndarray,
+        soc_p50: np.ndarray,
+        soc_p95: np.ndarray,
+        scenario_name: str,
+    ) -> None:
+        plt.figure(figsize=(7.2, 4.2))
+        t_hr = t_s / 3600.0
+        plt.fill_between(t_hr, soc_p5 * 100.0, soc_p95 * 100.0, color="tab:blue", alpha=0.25)
+        plt.plot(t_hr, soc_p50 * 100.0, color="tab:blue", linewidth=2.0, label="Median SOC")
+        plt.xlabel("Time (h)")
+        plt.ylabel("SOC (%)")
+        plt.title(f"Uncertainty Band (5-95%): {scenario_name}")
+        plt.legend()
+        plt.tight_layout()
+
+    def plot_uncertainty_histogram(self, tte_s: np.ndarray, scenario_name: str) -> None:
+        plt.figure(figsize=(6.5, 4.0))
+        tte_hr = tte_s / 3600.0
+        plt.hist(tte_hr, bins=24, color="tab:green", alpha=0.8)
+        plt.xlabel("Time-to-Empty (h)")
+        plt.ylabel("Count")
+        plt.title(f"Uncertainty: Time-to-Empty Distribution ({scenario_name})")
+        plt.tight_layout()
+
 
 def constant_profile(value: float) -> Callable[[float], float]:
     return lambda t: float(value)
@@ -646,6 +679,31 @@ def build_grid(cfg: Any) -> np.ndarray:
     raise ValueError("Grid config must be a list or a linspace dict.")
 
 
+def sample_params(
+    base: BatteryParams,
+    cfg: Dict[str, Any],
+    rng: np.random.Generator,
+) -> BatteryParams:
+    perturb = cfg.get("perturb", {})
+    payload = dict(base.__dict__)
+    for name, spec in perturb.items():
+        if name not in payload:
+            continue
+        value = payload[name]
+        if not isinstance(value, (int, float)):
+            continue
+        std_frac = float(spec.get("std_frac", 0.0))
+        if std_frac <= 0.0:
+            continue
+        sample = rng.normal(loc=float(value), scale=abs(float(value)) * std_frac)
+        if "min" in spec:
+            sample = max(sample, float(spec["min"]))
+        if "max" in spec:
+            sample = min(sample, float(spec["max"]))
+        payload[name] = sample
+    return BatteryParams(**payload)
+
+
 def load_yaml_config(path: Path) -> Dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         data = yaml.safe_load(handle)
@@ -666,7 +724,7 @@ def build_scenario(cfg: Dict[str, Any]) -> Scenario:
         wifi_state=build_profile(cfg["wifi_state"]),
         gps_state=build_profile(cfg["gps_state"]),
         charger_power=build_profile(cfg["charger_power"]),
-        eta_logic=float(cfg["eta_logic"]),
+        eta_radiation=float(cfg["eta_radiation"]),
     )
 
 
@@ -733,6 +791,43 @@ def run_scenarios(config_path: str = "config.yaml") -> None:
                 time_grid[i, j] = res.time_to_empty_s / 3600.0
 
         viz.plot_sensitivity_heatmap(time_grid, brightness_grid, temp_grid_c)
+
+    uncertainty = config.get("uncertainty", {})
+    if uncertainty.get("enabled", False):
+        base_name = uncertainty.get("base_scenario")
+        base = scenarios[0]
+        if base_name:
+            for sc in scenarios:
+                if sc.name == base_name:
+                    base = sc
+                    break
+
+        n_samples = int(uncertainty.get("n_samples", 200))
+        seed = int(uncertainty.get("seed", 42))
+        rng = np.random.default_rng(seed)
+
+        time_grid = np.arange(0.0, base.duration_s + base.dt, base.dt)
+        soc_samples = np.zeros((n_samples, len(time_grid)))
+        tte_samples = np.zeros(n_samples)
+
+        for i in range(n_samples):
+            params_i = sample_params(params, uncertainty, rng)
+            system_i = PowerSystem(params_i)
+            res = system_i.solve(base)
+            soc_samples[i, :] = np.interp(
+                time_grid,
+                res.t,
+                res.soc,
+                left=res.soc[0],
+                right=0.0,
+            )
+            tte_samples[i] = res.time_to_empty_s
+
+        soc_p5 = np.percentile(soc_samples, 5.0, axis=0)
+        soc_p50 = np.percentile(soc_samples, 50.0, axis=0)
+        soc_p95 = np.percentile(soc_samples, 95.0, axis=0)
+        viz.plot_uncertainty_band(time_grid, soc_p5, soc_p50, soc_p95, base.name)
+        viz.plot_uncertainty_histogram(tte_samples, base.name)
 
     output_cfg = config.get("output", {})
     if output_cfg.get("enabled", False):

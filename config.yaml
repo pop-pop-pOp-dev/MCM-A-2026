@@ -12,9 +12,6 @@ battery_params:
   hA: 1.8                   # Lumped convection coefficient [W/K]
   T_env: 298.15             # Ambient temperature [K]
 
-  # Logic efficiency (fraction of electrical power converted to useful work)
-  eta_logic: 0.85
-
   # OCV curve polynomial coefficients (high order to constant)
   # V = a*s^3 + b*s^2 + c*s + d
   ocv_poly: [3.2, 0.6, -0.15, 0.05]
@@ -40,6 +37,7 @@ battery_params:
   Ea_cap: 8000.0            # Capacity temperature dependence [J/mol]
 
   # KiBaM parameters
+  kibam_enabled: true       # Enable KiBaM recovery dynamics
   kibam_c: 0.6              # Available charge fraction [-]
   kibam_k: 3.0e-4           # Diffusion rate constant [1/s]
 
@@ -82,7 +80,7 @@ scenarios:
     duration_s: 21600
     dt: 10
     env_temp_k: 298.15
-    eta_logic: 0.88
+    eta_radiation: 0.06
     brightness: {type: constant, value: 0.85}
     apl: {type: constant, value: 0.7}
     cpu_util: {type: constant, value: 0.45}
@@ -94,7 +92,7 @@ scenarios:
     duration_s: 14400
     dt: 10
     env_temp_k: 300.15
-    eta_logic: 0.82
+    eta_radiation: 0.05
     brightness: {type: constant, value: 0.95}
     apl: {type: constant, value: 0.8}
     cpu_util: {type: constant, value: 0.9}
@@ -106,7 +104,7 @@ scenarios:
     duration_s: 25200
     dt: 10
     env_temp_k: 273.15
-    eta_logic: 0.86
+    eta_radiation: 0.05
     brightness: {type: constant, value: 0.6}
     apl: {type: constant, value: 0.6}
     cpu_util: {type: constant, value: 0.4}
@@ -128,6 +126,17 @@ sensitivity:
     start: -5
     end: 35
     num: 9
+
+uncertainty:
+  enabled: true
+  base_scenario: "Video Streaming"
+  n_samples: 200
+  seed: 42
+  perturb:
+    hA: {std_frac: 0.1, min: 0.5, max: 3.5}
+    R_ref: {std_frac: 0.1, min: 0.02, max: 0.15}
+    Ea_R: {std_frac: 0.1, min: 8000, max: 40000}
+    k_cycle: {std_frac: 0.2, min: 1.0e-7, max: 1.0e-5}
 
 output:
   enabled: true
