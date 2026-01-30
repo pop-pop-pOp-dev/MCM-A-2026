@@ -36,10 +36,9 @@ class BatteryParams:
     Cp: float  # Effective heat capacity [J/(kg*K)]
     hA: float  # Lumped convection coefficient [W/K]
     T_env: float  # Ambient temperature [K]
-
-    # OCV curve polynomial coefficients (high order to constant)
-    # Typical Li-ion OCV vs SOC shape (approximate fit)
-    ocv_poly: Tuple[float, ...]  # V = a*s^3 + b*s^2 + c*s + d
+    # OCV model configuration
+    ocv_model: str  # "polynomial" or "combined"
+    ocv_coeffs: Tuple[float, ...]  # polynomial: high->const, combined: [k0..k4]
 
     # Internal resistance model parameters
     R_ref: float  # Reference internal resistance at T_ref and SOC ~ 0.5 [Ohm]
@@ -104,7 +103,7 @@ class BatteryParams:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "BatteryParams":
         payload = dict(data)
-        payload["ocv_poly"] = tuple(payload["ocv_poly"])
+        payload["ocv_coeffs"] = tuple(payload["ocv_coeffs"])
         return cls(**payload)
 
 
@@ -176,9 +175,13 @@ class BatteryPhysics:
         self.params = params
 
     def get_ocv(self, soc: float) -> float:
-        # OCV curve approximated with polynomial fit
+        model = getattr(self.params, "ocv_model", "polynomial").lower()
+        if model == "combined":
+            k0, k1, k2, k3, k4 = self.params.ocv_coeffs
+            s = np.clip(soc, 0.001, 0.999)
+            return float(k0 - k1 / s - k2 * s + k3 * np.log(s) + k4 * np.log(1.0 - s))
         soc = np.clip(soc, 0.0, 1.0)
-        return float(np.polyval(self.params.ocv_poly, soc))
+        return float(np.polyval(self.params.ocv_coeffs, soc))
 
     def get_r_int(self, soc: float, temp_k: float, soh: float) -> float:
         # Arrhenius temperature dependence for resistance

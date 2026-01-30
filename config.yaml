@@ -12,9 +12,10 @@ battery_params:
   hA: 1.8                   # Lumped convection coefficient [W/K]
   T_env: 298.15             # Ambient temperature [K]
 
-  # OCV curve polynomial coefficients (high order to constant)
-  # V = a*s^3 + b*s^2 + c*s + d
-  ocv_poly: [3.2, 0.6, -0.15, 0.05]
+  # OCV model configuration
+  ocv_model: "combined"
+  # Combined model coefficients: [k0, k1, k2, k3, k4]
+  ocv_coeffs: [4.2, 0.02, 0.4, 0.05, -0.03]
 
   # Internal resistance model parameters
   R_ref: 0.06               # Reference internal resistance [Ohm]
