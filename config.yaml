@@ -1,0 +1,140 @@
+# ACM Battery Simulation Configuration (YAML)
+# All parameters are centralized here for reproducibility.
+
+battery_params:
+  # Electrical parameters
+  Q_design_ah: 4.0          # Design capacity [Ah]
+  V_cutoff: 3.0             # Cutoff voltage [V]
+
+  # Thermal parameters
+  m: 0.045                  # Effective mass of device [kg]
+  Cp: 900.0                 # Effective heat capacity [J/(kg*K)]
+  hA: 1.8                   # Lumped convection coefficient [W/K]
+  T_env: 298.15             # Ambient temperature [K]
+
+  # Logic efficiency (fraction of electrical power converted to useful work)
+  eta_logic: 0.85
+
+  # OCV curve polynomial coefficients (high order to constant)
+  # V = a*s^3 + b*s^2 + c*s + d
+  ocv_poly: [3.2, 0.6, -0.15, 0.05]
+
+  # Internal resistance model parameters
+  R_ref: 0.06               # Reference internal resistance [Ohm]
+  T_ref: 298.15             # Reference temperature [K]
+  Ea_R: 18000.0             # Arrhenius activation energy [J/mol]
+  R_gas: 8.314              # Universal gas constant [J/(mol*K)]
+  r_soc_coeff: 2.5          # Low-SOC resistance rise strength [-]
+  r_soc_k: 7.0              # Low-SOC exponential sharpness [-]
+  r_soh_coeff: 1.0          # Resistance increase per SOH loss [-]
+
+  # Coulombic efficiency parameters
+  eta_coulomb_ref: 0.995
+  eta_coulomb_temp_coeff: 0.0008
+
+  # Degradation parameters
+  k_cycle: 2.0e-6           # Cycle aging coefficient [1/(A*s)]
+  k_cal: 1.2e-9             # Calendar aging coefficient [1/s]
+  Ea_cal: 50000.0           # Activation energy [J/mol]
+  alpha_soc: 1.2            # SOC acceleration factor [-]
+  Ea_cap: 8000.0            # Capacity temperature dependence [J/mol]
+
+  # KiBaM parameters
+  kibam_c: 0.6              # Available charge fraction [-]
+  kibam_k: 3.0e-4           # Diffusion rate constant [1/s]
+
+  # Screen parameters
+  P_max_scr: 400.0          # Max screen power density [W/m^2]
+  A_area: 0.0075            # Screen active area [m^2]
+  gamma_scr: 1.5            # Brightness nonlinearity exponent [-]
+
+  # CPU parameters
+  P_idle: 0.6               # CPU idle power [W]
+  P_little_max: 1.2         # Little cores max power [W]
+  P_big_max: 3.0            # Big cores max power [W]
+  u_thresh: 0.45            # Threshold for big cores [-]
+  T_throttle: 318.15        # Throttle midpoint temperature [K] ~ 45C
+  throttle_k: 0.35          # Throttle sigmoid steepness [-]
+
+  # Macro communication states
+  wifi_idle_power: 0.05     # WiFi connected idle power [W]
+  wifi_active_power: 0.3    # WiFi active transfer power [W]
+  gps_on_power: 0.5         # GPS navigation power [W]
+
+  # OS feedback (low power mode)
+  lpm_soc_thresh: 0.2       # SOC threshold [-]
+  lpm_k: 20.0               # Sigmoid steepness [-]
+  lpm_min_factor: 0.7       # Minimum scaling factor [-]
+
+  # Charging parameters
+  charger_efficiency: 0.9   # Charger efficiency [-]
+  v_stress_thresh: 4.1      # Voltage stress threshold [V]
+  k_stress: 5.0e-10         # Voltage stress coefficient [1/s]
+  beta_stress: 12.0         # Voltage stress slope [1/V]
+
+  # Initial state
+  SOC_init: 1.0
+  T_init: 298.15
+  SOH_init: 1.0
+
+scenarios:
+  - name: Video Streaming
+    duration_s: 21600
+    dt: 10
+    env_temp_k: 298.15
+    eta_logic: 0.88
+    brightness: {type: constant, value: 0.85}
+    apl: {type: constant, value: 0.7}
+    cpu_util: {type: constant, value: 0.45}
+    wifi_state: {type: constant, value: 2}         # 0 off, 1 idle, 2 active
+    gps_state: {type: constant, value: 1}          # 0 off, 1 on
+    charger_power: {type: constant, value: 0.0}
+
+  - name: Gaming
+    duration_s: 14400
+    dt: 10
+    env_temp_k: 300.15
+    eta_logic: 0.82
+    brightness: {type: constant, value: 0.95}
+    apl: {type: constant, value: 0.8}
+    cpu_util: {type: constant, value: 0.9}
+    wifi_state: {type: constant, value: 1}
+    gps_state: {type: constant, value: 1}
+    charger_power: {type: constant, value: 0.0}
+
+  - name: Winter Usage
+    duration_s: 25200
+    dt: 10
+    env_temp_k: 273.15
+    eta_logic: 0.86
+    brightness: {type: constant, value: 0.6}
+    apl: {type: constant, value: 0.6}
+    cpu_util: {type: constant, value: 0.4}
+    wifi_state: {type: constant, value: 1}
+    gps_state: {type: constant, value: 0}
+    charger_power: {type: constant, value: 0.0}
+
+sensitivity:
+  base_scenario: "Video Streaming"
+  duration_s: 28800
+  dt: 20
+  brightness_grid:
+    type: linspace
+    start: 0.2
+    end: 1.0
+    num: 9
+  temp_grid_c:
+    type: linspace
+    start: -5
+    end: 35
+    num: 9
+
+output:
+  enabled: true
+  format: csv   # csv or json
+  directory: outputs
+
+visualization:
+  realtime: true
+  interval_ms: 80
+  max_points: 600
