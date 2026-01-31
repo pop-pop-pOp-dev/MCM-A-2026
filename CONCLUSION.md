@@ -89,5 +89,19 @@ OCV 由真实手机数据拟合，低 SOC/高 SOC 端点稳定性更好。
 6. **场景对比**完整且结果一致，具有可视化证据与数据支撑。  
 7. **模型驱动建议**可基于功耗/温度/内阻耦合给出可执行策略。  
 
+## 10. 老化历史效应的对比验证（Time Scale Separation）
+**结论：SOH 变化在单次放电中很小，但“历史差异”在对比实验中表现显著。**  
+通过设置不同 `SOH_init`（1.0/0.8/0.5/0.3）并保持同一负载（Gaming），可见：
+- 低 SOH 样机端电压下降更快；
+- 温度上升更快，符合 `R_int` 随 SOH 下降而增加的机理；
+- 能耗与可用续航显著缩短。
+
+**证据：**  
+- 对比电压曲线：`outputs/soh_comparison/20260131_195801/soh_voltage_time.png`  
+- 对比温度曲线：`outputs/soh_comparison/20260131_195801/soh_temp_time.png`  
+- 能耗对比：`outputs/soh_comparison/20260131_195801/soh_energy_bar.png`  
+- 原始数据：`outputs/soh_comparison/20260131_195801/soh_comparison.csv`  
+- 实验结论：`outputs/soh_comparison/20260131_195801/SOH_COMPARISON_CONCLUSION.md`
+
 > 若需继续冲击 O 奖标准，建议进一步将 **极化 RC 参数**与**温度电压修正系数**纳入校准，以减少剩余系统偏差。
 
