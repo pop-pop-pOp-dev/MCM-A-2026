@@ -15,7 +15,10 @@ battery_params:
   # OCV model configuration
   ocv_model: "combined"
   # Combined model coefficients: [k0, k1, k2, k3, k4]
-  ocv_coeffs: [4.2, 0.02, 0.4, 0.05, -0.03]
+  ocv_coeffs: [3.1641369763126996, 0.013329434532685864, -0.9746467060946551, -0.22504836405236922, -0.024197927338674676]
+  ocv_temp_ref: 298.15
+  ocv_temp_coeff: -2.0e-4
+  ocv_temp_quad: -1.0e-6
 
   # Internal resistance model parameters
   R_ref: 0.06               # Reference internal resistance [Ohm]
@@ -41,6 +44,11 @@ battery_params:
   kibam_enabled: true       # Enable KiBaM recovery dynamics
   kibam_c: 0.6              # Available charge fraction [-]
   kibam_k: 3.0e-4           # Diffusion rate constant [1/s]
+
+  # Polarization RC branch
+  rc_enabled: true
+  r_polar: 0.015            # Polarization resistance [Ohm]
+  c_polar: 1200.0           # Polarization capacitance [F]
 
   # Screen parameters
   P_max_scr: 400.0          # Max screen power density [W/m^2]
@@ -79,7 +87,7 @@ battery_params:
 scenarios:
   - name: Video Streaming
     duration_s: 21600
-    dt: 10
+    dt: 5
     env_temp_k: 298.15
     eta_radiation: 0.03
     brightness: {type: constant, value: 0.85}
@@ -91,7 +99,7 @@ scenarios:
 
   - name: Gaming
     duration_s: 14400
-    dt: 10
+    dt: 5
     env_temp_k: 300.15
     eta_radiation: 0.03
     brightness: {type: constant, value: 0.95}
@@ -103,7 +111,7 @@ scenarios:
 
   - name: Winter Usage
     duration_s: 25200
-    dt: 10
+    dt: 5
     env_temp_k: 273.15
     eta_radiation: 0.03
     brightness: {type: constant, value: 0.6}
@@ -116,7 +124,7 @@ scenarios:
 sensitivity:
   base_scenario: "Video Streaming"
   duration_s: 28800
-  dt: 20
+  dt: 10
   brightness_grid:
     type: linspace
     start: 0.2
@@ -131,7 +139,7 @@ sensitivity:
 uncertainty:
   enabled: true
   base_scenario: "Video Streaming"
-  n_samples: 200
+  n_samples: 50
   seed: 42
   perturb:
     hA: {std_frac: 0.1, min: 0.5, max: 3.5}
@@ -145,18 +153,33 @@ data_paths:
   panasonic_temp_csv: datasets/panasonic_temp/n10degC_cycle1_standard.csv
   aging_chalmers_dir: datasets/aging_chalmers
   aosp_power_profile_xml: datasets/aosp_power_profile/power_profile.xml
+  phone_validation_csv: datasets/phone_validation/phone_validation_wltp.csv
+  phone_validation_real_csv: datasets/phone_validation_real/phone_validation_bcm_s9_combined.csv
 
 validation:
   enabled: true
-  current_profile_csv: datasets/nasa_random/rw17_standard.csv
+  mode: current_profile
+  current_profile_csv: datasets/phone_validation_real/phone_validation_bcm_s9_combined.csv
   use_temp_from_csv: true
+  calibrate: true
+  current_scale_bounds: [0.8, 1.2]
+  use_soc_from_csv: true
 
 output:
   enabled: true
   format: csv   # csv or json
   directory: outputs
 
+solver:
+  method: DOP853
+  rtol: 1.0e-8
+  atol: 1.0e-10
+  max_step: 5.0
+
 visualization:
-  realtime: true
+  realtime: false
   interval_ms: 80
-  max_points: 600
+  max_points: 300
+  frame_stride: 50
+  save_frames: true
+  show: false

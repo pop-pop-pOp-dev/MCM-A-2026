@@ -282,6 +282,7 @@ def main() -> None:
     ax.set_ylabel("Temperature (C)")
     ax.set_zlabel("R_int (Ohm)")
     ax.set_title("Internal Resistance Surface")
+    ax.view_init(elev=26, azim=-60)
     plt.tight_layout()
     plt.savefig(PIC_DIR / "rint_surface_3d.png", dpi=300)
     plt.close()
@@ -289,9 +290,16 @@ def main() -> None:
     # Plot 7: Power comparison (linear + log)
     plt.figure(figsize=(7.2, 4.2))
     ax = plt.gca()
-    ax.plot(labels, values, marker="o", color="#1b998b", linewidth=1.2)
+    ax.plot(labels, values, marker="o", color="#1b998b", linewidth=1.1)
     for i, v in enumerate(values):
-        ax.annotate(format_value(v), (i, v), textcoords="offset points", xytext=(0, 6), ha="center", fontsize=8)
+        ax.annotate(
+            f"({labels[i]}, {format_value(v)})",
+            (i, v),
+            textcoords="offset points",
+            xytext=(0, 6),
+            ha="center",
+            fontsize=8,
+        )
     plt.ylabel("Power (W)")
     plt.title("Power Parameters (Line Comparison)")
     plt.xticks(rotation=20, ha="right")

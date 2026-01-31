@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, List, Tuple
 
 import numpy as np
 from scipy.integrate import solve_ivp
+from scipy.optimize import minimize, minimize_scalar
 import matplotlib.pyplot as plt
 import seaborn as sns
 import yaml
@@ -39,6 +40,9 @@ class BatteryParams:
     # OCV model configuration
     ocv_model: str  # "polynomial" or "combined"
     ocv_coeffs: Tuple[float, ...]  # polynomial: high->const, combined: [k0..k4]
+    ocv_temp_ref: float  # Reference temperature for OCV correction [K]
+    ocv_temp_coeff: float  # Linear OCV temp coefficient [V/K]
+    ocv_temp_quad: float  # Quadratic OCV temp coefficient [V/K^2]
 
     # Internal resistance model parameters
     R_ref: float  # Reference internal resistance at T_ref and SOC ~ 0.5 [Ohm]
@@ -64,6 +68,11 @@ class BatteryParams:
     kibam_enabled: bool  # Enable KiBaM recovery dynamics
     kibam_c: float  # Available charge fraction [-]
     kibam_k: float  # Diffusion rate constant [1/s]
+
+    # Polarization RC branch parameters
+    rc_enabled: bool  # Enable RC polarization dynamics
+    r_polar: float  # Polarization resistance [Ohm]
+    c_polar: float  # Polarization capacitance [F]
 
     # Screen parameters
     P_max_scr: float  # Max screen power density [W/m^2]
@@ -174,14 +183,20 @@ class BatteryPhysics:
     def __init__(self, params: BatteryParams):
         self.params = params
 
-    def get_ocv(self, soc: float) -> float:
+    def get_ocv(self, soc: float, temp_k: float | None = None) -> float:
         model = getattr(self.params, "ocv_model", "polynomial").lower()
         if model == "combined":
             k0, k1, k2, k3, k4 = self.params.ocv_coeffs
             s = np.clip(soc, 0.001, 0.999)
-            return float(k0 - k1 / s - k2 * s + k3 * np.log(s) + k4 * np.log(1.0 - s))
-        soc = np.clip(soc, 0.0, 1.0)
-        return float(np.polyval(self.params.ocv_coeffs, soc))
+            base = k0 - k1 / s - k2 * s + k3 * np.log(s) + k4 * np.log(1.0 - s)
+        else:
+            soc = np.clip(soc, 0.0, 1.0)
+            base = float(np.polyval(self.params.ocv_coeffs, soc))
+        if temp_k is None:
+            temp_k = self.params.ocv_temp_ref
+        d_t = float(temp_k - self.params.ocv_temp_ref)
+        temp_corr = self.params.ocv_temp_coeff * d_t + self.params.ocv_temp_quad * (d_t ** 2)
+        return float(base + temp_corr)
 
     def get_r_int(self, soc: float, temp_k: float, soh: float) -> float:
         # Arrhenius temperature dependence for resistance
@@ -270,17 +285,18 @@ class PowerSystem:
         return float(np.clip(y1 / c_available, 0.0, 1.0))
 
     def _voltage(self, t: float, y: np.ndarray, scenario: Scenario) -> Tuple[float, float, float]:
-        y1, y2, temp_k, soh = y
+        y1, y2, temp_k, soh, v_rc = y
         soc = self._soc_from_state(y1, temp_k, soh)
-        ocv = self.physics.get_ocv(soc)
+        ocv = self.physics.get_ocv(soc, temp_k)
         r_int = self.physics.get_r_int(soc, temp_k, soh)
         powers = self._component_powers(t, temp_k, scenario)
         current = self._solve_current(ocv, r_int, powers["P_total"])
-        v_term = ocv - current * r_int
+        v_polar = v_rc if self.params.rc_enabled else 0.0
+        v_term = ocv - current * r_int - v_polar
         return v_term, ocv, current
 
     def derivative(self, t: float, y: np.ndarray, scenario: Scenario) -> np.ndarray:
-        y1, y2, temp_k, soh = y
+        y1, y2, temp_k, soh, v_rc = y
         soh_c = np.clip(soh, 0.05, 1.0)
         soc_c = self._soc_from_state(y1, temp_k, soh_c)
 
@@ -291,20 +307,28 @@ class PowerSystem:
         powers["P_cpu"] *= phi_soc
         powers["P_net"] *= phi_soc
 
-        ocv = self.physics.get_ocv(soc_c)
+        ocv = self.physics.get_ocv(soc_c, temp_k)
         r_int = self.physics.get_r_int(soc_c, temp_k, soh_c)
         current = self._solve_current(ocv, r_int, powers["P_total"])
-        v_term = ocv - current * r_int
+        v_polar = v_rc if self.params.rc_enabled else 0.0
+        v_term = ocv - current * r_int - v_polar
 
         # KiBaM dynamics (optional)
         if self.params.kibam_enabled:
             h1 = y1 / max(self.params.kibam_c, 1e-6)
             h2 = y2 / max(1.0 - self.params.kibam_c, 1e-6)
-            dy1 = -current + self.params.kibam_k * (h2 - h1)
+            dy1 = -(current / 3600.0) + self.params.kibam_k * (h2 - h1)
             dy2 = -self.params.kibam_k * (h2 - h1)
         else:
-            dy1 = -current
+            dy1 = -(current / 3600.0)
             dy2 = 0.0
+
+        # Polarization RC dynamics
+        if self.params.rc_enabled:
+            tau = max(self.params.r_polar * self.params.c_polar, 1e-6)
+            dv_rc = -(v_rc / tau) + (current / max(self.params.c_polar, 1e-6))
+        else:
+            dv_rc = 0.0
 
         # Thermal dynamics (Joule + load heat - convection)
         p_logic_heat = powers["P_load"] * (1.0 - scenario.eta_radiation)
@@ -328,11 +352,11 @@ class PowerSystem:
 
         # If voltage is below cutoff, freeze dynamics to help event detection
         if v_term <= self.params.V_cutoff:
-            return np.array([0.0, 0.0, 0.0, 0.0])
+            return np.array([0.0, 0.0, 0.0, 0.0, 0.0])
 
-        return np.array([dy1, dy2, d_temp, d_soh])
+        return np.array([dy1, dy2, d_temp, d_soh, dv_rc])
 
-    def solve(self, scenario: Scenario) -> SimulationResult:
+    def solve(self, scenario: Scenario, solver_cfg: Dict[str, Any] | None = None) -> SimulationResult:
         c_total = self._capacity_total(self.params.T_init, self.params.SOH_init)
         if self.params.kibam_enabled:
             y1_0 = self.params.SOC_init * (self.params.kibam_c * c_total)
@@ -340,7 +364,8 @@ class PowerSystem:
         else:
             y1_0 = self.params.SOC_init * c_total
             y2_0 = 0.0
-        y0 = np.array([y1_0, y2_0, self.params.T_init, self.params.SOH_init], dtype=float)
+        v_rc0 = 0.0
+        y0 = np.array([y1_0, y2_0, self.params.T_init, self.params.SOH_init, v_rc0], dtype=float)
         t_eval = np.arange(0.0, scenario.duration_s + scenario.dt, scenario.dt)
 
         def cutoff_event(t: float, y: np.ndarray) -> float:
@@ -350,14 +375,24 @@ class PowerSystem:
         cutoff_event.terminal = True
         cutoff_event.direction = -1.0
 
+        solver_cfg = solver_cfg or {}
+        method = str(solver_cfg.get("method", "DOP853"))
+        rtol = float(solver_cfg.get("rtol", 1e-6))
+        atol = float(solver_cfg.get("atol", 1e-8))
+        max_step = solver_cfg.get("max_step")
+        if max_step is not None:
+            max_step = float(max_step)
+
         sol = solve_ivp(
             fun=lambda t, y: self.derivative(t, y, scenario),
             t_span=(0.0, scenario.duration_s),
             y0=y0,
             t_eval=t_eval,
             events=cutoff_event,
-            rtol=1e-6,
-            atol=1e-8,
+            method=method,
+            rtol=rtol,
+            atol=atol,
+            max_step=max_step,
         )
 
         t = sol.t
@@ -386,7 +421,7 @@ class PowerSystem:
         p_heat = np.zeros(n)
 
         for i in range(n):
-            y1_i, y2_i, temp_i, soh_i = y[:, i]
+            y1_i, y2_i, temp_i, soh_i, v_rc_i = y[:, i]
             soc_i = self._soc_from_state(y1_i, temp_i, soh_i)
             powers = self._component_powers(t[i], temp_i, scenario)
             phi_soc = self.physics.lpm_factor(soc_i)
@@ -394,10 +429,10 @@ class PowerSystem:
             powers["P_screen"] *= phi_soc
             powers["P_cpu"] *= phi_soc
             powers["P_net"] *= phi_soc
-            ocv = self.physics.get_ocv(soc_i)
+            ocv = self.physics.get_ocv(soc_i, temp_i)
             r_int = self.physics.get_r_int(soc_i, temp_i, soh_i)
             i_cur = self._solve_current(ocv, r_int, powers["P_total"])
-            v_t = ocv - i_cur * r_int
+            v_t = ocv - i_cur * r_int - (v_rc_i if self.params.rc_enabled else 0.0)
             v_term[i] = v_t
             v_ocv[i] = ocv
             current[i] = i_cur
@@ -412,7 +447,7 @@ class PowerSystem:
             p_charge_heat = powers["P_charge"] * (1.0 - self.params.charger_efficiency)
             p_heat[i] = i_cur ** 2 * r_int + p_load[i] * (1.0 - scenario.eta_radiation) + p_charge_heat
 
-        voltages = {"V_term": v_term, "V_ocv": v_ocv, "I": current}
+        voltages = {"V_term": v_term, "V_ocv": v_ocv, "I": current, "V_rc": y[4, :] if self.params.rc_enabled else np.zeros(n)}
         powers = {
             "P_screen": p_screen,
             "P_cpu": p_cpu,
@@ -449,6 +484,9 @@ class Visualizer:
         result: SimulationResult,
         interval_ms: int = 80,
         max_points: int | None = None,
+        save_dir: Path | None = None,
+        frame_stride: int = 10,
+        show: bool = False,
     ) -> None:
         # Real-time dashboard: English labels, journal-style aesthetics
         t = result.t
@@ -519,6 +557,7 @@ class Visualizer:
 
         plt.tight_layout()
 
+        frame_idx = 0
         for idx in range(1, len(t), step):
             t_hr = t[:idx] / 3600.0
             soc_line.set_data(t_hr, soc[:idx])
@@ -538,7 +577,20 @@ class Visualizer:
                 ax.relim()
                 ax.autoscale_view(scalex=True, scaley=True)
 
-            plt.pause(max(interval_ms, 1) / 1000.0)
+            if save_dir is not None and (frame_idx % max(frame_stride, 1) == 0):
+                save_dir.mkdir(parents=True, exist_ok=True)
+                frame_path = save_dir / f"{result.scenario.name.replace(' ', '_')}_frame_{frame_idx:04d}.png"
+                fig.savefig(frame_path, dpi=200)
+            frame_idx += 1
+
+            if show:
+                plt.pause(max(interval_ms, 1) / 1000.0)
+
+        if save_dir is not None:
+            final_path = save_dir / f"{result.scenario.name.replace(' ', '_')}_final.png"
+            fig.savefig(final_path, dpi=300)
+        if not show:
+            plt.close(fig)
 
     def plot_phase_portrait(self, results: List[SimulationResult]) -> None:
         plt.figure(figsize=(7.0, 4.2))
@@ -577,9 +629,36 @@ class Visualizer:
     ) -> None:
         plt.figure(figsize=(7.2, 4.2))
         t_hr = time_s / 3600.0
-        plt.plot(t_hr, v_meas, label="Measured", linewidth=2.0, alpha=0.85)
-        plt.plot(t_hr, v_pred, label="Model", linewidth=2.0, linestyle="--")
+        plt.plot(t_hr, v_meas, label="Measured", linewidth=1.6, alpha=0.85)
+        plt.plot(t_hr, v_pred, label="Model", linewidth=1.4, linestyle="--")
         plt.xlabel("Time (h)")
+        plt.ylabel("Voltage (V)")
+        plt.title(title)
+        plt.legend()
+        plt.tight_layout()
+
+    def plot_ocv_validation(
+        self,
+        soc: np.ndarray,
+        v_pred: np.ndarray,
+        v_meas: np.ndarray,
+        title: str,
+    ) -> None:
+        plt.figure(figsize=(7.2, 4.2))
+        plt.scatter(soc, v_meas, label="Measured OCV", s=16, alpha=0.8)
+        order = np.argsort(soc)
+        plt.plot(soc[order], v_pred[order], label="Model OCV", linewidth=1.8)
+        if soc.size > 0:
+            idx = np.unique(np.linspace(0, soc.size - 1, 6, dtype=int))
+            for i in idx:
+                plt.annotate(
+                    f"({soc[i]:.2f}, {v_meas[i]:.3f})",
+                    (soc[i], v_meas[i]),
+                    textcoords="offset points",
+                    xytext=(6, 4),
+                    fontsize=8,
+                )
+        plt.xlabel("SOC (-)")
         plt.ylabel("Voltage (V)")
         plt.title(title)
         plt.legend()
@@ -639,8 +718,22 @@ class Visualizer:
     ) -> None:
         plt.figure(figsize=(7.2, 4.2))
         t_hr = t_s / 3600.0
-        plt.fill_between(t_hr, soc_p5 * 100.0, soc_p95 * 100.0, color="tab:blue", alpha=0.25)
-        plt.plot(t_hr, soc_p50 * 100.0, color="tab:blue", linewidth=2.0, label="Median SOC")
+        band_color = "#5a7d9a"
+        median_color = "#0f4c5c"
+        plt.fill_between(t_hr, soc_p5 * 100.0, soc_p95 * 100.0, color=band_color, alpha=0.18, label="5-95% band")
+        plt.plot(t_hr, soc_p50 * 100.0, color=median_color, linewidth=1.1, label="Median SOC")
+        plt.plot(t_hr, soc_p5 * 100.0, color=band_color, linewidth=0.8, alpha=0.7)
+        plt.plot(t_hr, soc_p95 * 100.0, color=band_color, linewidth=0.8, alpha=0.7)
+        if t_hr.size > 0:
+            idx = np.unique(np.linspace(0, t_hr.size - 1, 5, dtype=int))
+            for i in idx:
+                plt.annotate(
+                    f"{t_hr[i]:.1f}h, {soc_p50[i]*100.0:.1f}%",
+                    (t_hr[i], soc_p50[i] * 100.0),
+                    textcoords="offset points",
+                    xytext=(6, 4),
+                    fontsize=8,
+                )
         plt.xlabel("Time (h)")
         plt.ylabel("SOC (%)")
         plt.title(f"Uncertainty Band (5-95%): {scenario_name}")
@@ -712,6 +805,7 @@ def load_current_profile(path: Path) -> Dict[str, np.ndarray]:
     current_a = pick(["current_a", "current", "I", "Current"])
     voltage_v = pick(["voltage_v", "v", "V", "Voltage"])
     temp_c = pick(["temp_c", "temperature_c", "temp", "Temperature"])
+    soc = pick(["soc", "soc_frac", "soc_fraction", "soc_pct", "soc_percent", "SoC"])
 
     if time_s.size == 0 or current_a.size == 0:
         raise ValueError("CSV must include time_s and current_a columns.")
@@ -721,7 +815,26 @@ def load_current_profile(path: Path) -> Dict[str, np.ndarray]:
         "current_a": current_a,
         "voltage_v": voltage_v,
         "temp_c": temp_c,
+        "soc": soc,
     }
+
+
+def load_ocv_curve(path: Path) -> Tuple[np.ndarray, np.ndarray]:
+    data = np.genfromtxt(path, delimiter=",", names=True)
+
+    def pick(names: List[str]) -> np.ndarray:
+        for name in names:
+            if name in data.dtype.names:
+                return data[name].astype(float)
+        return np.array([])
+
+    soc = pick(["soc", "SOC", "z", "soc_frac", "soc_fraction"])
+    voltage_v = pick(["voltage_v", "ocv", "voltage", "V"])
+
+    if soc.size == 0 or voltage_v.size == 0:
+        raise ValueError("OCV CSV must include soc and voltage_v columns.")
+
+    return soc, voltage_v
 
 
 def sample_params(
@@ -753,12 +866,16 @@ def validate_current_profile(
     params: BatteryParams,
     profile_path: Path,
     use_temp_from_csv: bool = True,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    calibrate: bool = False,
+    current_scale_bounds: Tuple[float, float] = (0.5, 1.5),
+    use_soc_from_csv: bool = False,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, float]]:
     data = load_current_profile(profile_path)
     time_s = data["time_s"]
     current_raw = data["current_a"]
     voltage_meas = data["voltage_v"]
     temp_c = data["temp_c"]
+    soc_meas = data.get("soc", np.array([]))
 
     if voltage_meas.size == 0:
         raise ValueError("CSV must include voltage_v for validation.")
@@ -768,30 +885,84 @@ def validate_current_profile(
         current_model = -current_model
 
     physics = BatteryPhysics(params)
-    soc = np.zeros_like(time_s, dtype=float)
-    v_pred = np.zeros_like(time_s, dtype=float)
-    soc[0] = params.SOC_init
 
-    for i in range(1, len(time_s)):
-        dt = max(time_s[i] - time_s[i - 1], 0.0)
-        if use_temp_from_csv and temp_c.size == time_s.size:
-            temp_k = float(temp_c[i]) + 273.15
-        else:
-            temp_k = params.T_init
-        cap_ah = params.Q_design_ah * max(params.SOH_init, 0.05) * physics.capacity_temp_factor(temp_k)
-        soc[i] = soc[i - 1] - current_model[i] * dt / 3600.0 / max(cap_ah, 1e-9)
-        soc[i] = float(np.clip(soc[i], 0.0, 1.0))
-        r_int = physics.get_r_int(soc[i], temp_k, params.SOH_init)
-        ocv = physics.get_ocv(soc[i])
-        v_pred[i] = ocv - current_model[i] * r_int
+    def predict_voltage(current_series: np.ndarray, r_scale: float, ocv_scale: float) -> np.ndarray:
+        soc = np.zeros_like(time_s, dtype=float)
+        v_pred = np.zeros_like(time_s, dtype=float)
+        soc[0] = params.SOC_init
+        use_soc = bool(use_soc_from_csv and soc_meas.size == time_s.size)
+        if use_soc:
+            soc_series = soc_meas.astype(float).copy()
+            if np.nanmax(soc_series) > 1.5:
+                soc_series = soc_series / 100.0
+            soc_series = np.clip(soc_series, 0.0, 1.0)
+            soc[0] = soc_series[0]
 
-    if len(time_s) > 0:
-        temp_k0 = float(temp_c[0]) + 273.15 if (use_temp_from_csv and temp_c.size == time_s.size) else params.T_init
-        r_int0 = physics.get_r_int(soc[0], temp_k0, params.SOH_init)
-        ocv0 = physics.get_ocv(soc[0])
-        v_pred[0] = ocv0 - current_model[0] * r_int0
+        for i in range(1, len(time_s)):
+            dt = max(time_s[i] - time_s[i - 1], 0.0)
+            if use_temp_from_csv and temp_c.size == time_s.size:
+                temp_k = float(temp_c[i]) + 273.15
+            else:
+                temp_k = params.T_init
+            cap_ah = params.Q_design_ah * max(params.SOH_init, 0.05) * physics.capacity_temp_factor(temp_k)
+            if use_soc:
+                soc[i] = soc_series[i]
+            else:
+                soc[i] = soc[i - 1] - current_series[i] * dt / 3600.0 / max(cap_ah, 1e-9)
+                soc[i] = float(np.clip(soc[i], 0.0, 1.0))
+            r_int = physics.get_r_int(soc[i], temp_k, params.SOH_init) * r_scale
+            ocv = physics.get_ocv(soc[i]) * ocv_scale
+            v_pred[i] = ocv - current_series[i] * r_int
 
-    return time_s, v_pred, voltage_meas
+        if len(time_s) > 0:
+            temp_k0 = float(temp_c[0]) + 273.15 if (use_temp_from_csv and temp_c.size == time_s.size) else params.T_init
+            r_int0 = physics.get_r_int(soc[0], temp_k0, params.SOH_init) * r_scale
+            ocv0 = physics.get_ocv(soc[0]) * ocv_scale
+            v_pred[0] = ocv0 - current_series[0] * r_int0
+        return v_pred
+
+    meta: Dict[str, float] = {
+        "current_scale": 1.0,
+        "voltage_offset": 0.0,
+        "r_scale": 1.0,
+        "ocv_scale": 1.0,
+    }
+
+    if calibrate:
+        def rmse(params_vec: np.ndarray) -> float:
+            scale, r_scale, ocv_scale, offset = params_vec
+            v_pred = predict_voltage(current_model * scale, r_scale, ocv_scale)
+            v_adj = v_pred + offset
+            return float(np.sqrt(np.mean((v_adj - voltage_meas) ** 2)))
+
+        bounds = [
+            (current_scale_bounds[0], current_scale_bounds[1]),
+            (0.7, 1.5),
+            (0.95, 1.05),
+            (-0.2, 0.2),
+        ]
+        x0 = np.array([1.0, 1.0, 1.0, 0.0], dtype=float)
+        res = minimize(rmse, x0=x0, bounds=bounds, method="L-BFGS-B")
+        best_scale, best_r, best_ocv, best_offset = res.x
+        v_pred = predict_voltage(current_model * best_scale, best_r, best_ocv) + best_offset
+        meta["current_scale"] = float(best_scale)
+        meta["r_scale"] = float(best_r)
+        meta["ocv_scale"] = float(best_ocv)
+        meta["voltage_offset"] = float(best_offset)
+    else:
+        v_pred = predict_voltage(current_model, 1.0, 1.0)
+
+    return time_s, v_pred, voltage_meas, meta
+
+
+def validate_ocv_curve(
+    params: BatteryParams,
+    ocv_path: Path,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    soc, v_meas = load_ocv_curve(ocv_path)
+    physics = BatteryPhysics(params)
+    v_pred = np.array([physics.get_ocv(float(z), params.ocv_temp_ref) for z in soc], dtype=float)
+    return soc, v_pred, v_meas
 
 
 def load_yaml_config(path: Path) -> Dict[str, Any]:
@@ -830,20 +1001,52 @@ def run_scenarios(config_path: str = "config.yaml") -> None:
 
     scenarios_cfg = config["scenarios"]
     scenarios = [build_scenario(cfg) for cfg in scenarios_cfg]
-    results = [system.solve(sc) for sc in scenarios]
-
-    viz.plot_phase_portrait(results)
-    for res in results:
-        viz.plot_voltage_sag(res, params.V_cutoff)
-        viz.plot_power_decomposition(res)
+    solver_cfg = config.get("solver", {})
+    results = [system.solve(sc, solver_cfg) for sc in scenarios]
 
     viz_cfg = config.get("visualization", {})
+    show_plots = bool(viz_cfg.get("show", False))
+    plt.ioff()
+
+    output_cfg = config.get("output", {})
+    output_dir = Path(output_cfg.get("directory", "outputs"))
+    if not output_dir.is_absolute():
+        output_dir = Path(__file__).resolve().parent / output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
+    figures_dir = output_dir / "figures"
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
+    viz.plot_phase_portrait(results)
+    plt.savefig(figures_dir / "phase_portrait.png", dpi=300)
+    if not show_plots:
+        plt.close()
+
+    for res in results:
+        viz.plot_voltage_sag(res, params.V_cutoff)
+        plt.savefig(figures_dir / f"voltage_sag_{res.scenario.name.replace(' ', '_')}.png", dpi=300)
+        if not show_plots:
+            plt.close()
+        viz.plot_power_decomposition(res)
+        plt.savefig(figures_dir / f"power_decomposition_{res.scenario.name.replace(' ', '_')}.png", dpi=300)
+        if not show_plots:
+            plt.close()
+
     if viz_cfg.get("realtime", False):
         interval_ms = int(viz_cfg.get("interval_ms", 80))
         max_points = viz_cfg.get("max_points")
         max_points = int(max_points) if max_points is not None else None
+        frame_stride = int(viz_cfg.get("frame_stride", 10))
+        save_frames = bool(viz_cfg.get("save_frames", True))
+        frames_dir = output_dir / "frames"
         for res in results:
-            viz.realtime_dashboard(res, interval_ms=interval_ms, max_points=max_points)
+            viz.realtime_dashboard(
+                res,
+                interval_ms=interval_ms,
+                max_points=max_points,
+                save_dir=frames_dir if save_frames else None,
+                frame_stride=frame_stride,
+                show=show_plots,
+            )
 
     sensitivity = config.get("sensitivity", {})
     if sensitivity:
@@ -877,7 +1080,7 @@ def run_scenarios(config_path: str = "config.yaml") -> None:
                     charger_power=base.charger_power,
                     eta_radiation=base.eta_radiation,
                 )
-                res = system.solve(scenario)
+                res = system.solve(scenario, solver_cfg)
                 time_grid[i, j] = res.time_to_empty_s / 3600.0
 
         viz.plot_sensitivity_heatmap(time_grid, brightness_grid, temp_grid_c)
@@ -903,7 +1106,7 @@ def run_scenarios(config_path: str = "config.yaml") -> None:
         for i in range(n_samples):
             params_i = sample_params(params, uncertainty, rng)
             system_i = PowerSystem(params_i)
-            res = system_i.solve(base)
+            res = system_i.solve(base, solver_cfg)
             soc_samples[i, :] = np.interp(
                 time_grid,
                 res.t,
@@ -917,30 +1120,88 @@ def run_scenarios(config_path: str = "config.yaml") -> None:
         soc_p50 = np.percentile(soc_samples, 50.0, axis=0)
         soc_p95 = np.percentile(soc_samples, 95.0, axis=0)
         viz.plot_uncertainty_band(time_grid, soc_p5, soc_p50, soc_p95, base.name)
+        plt.savefig(figures_dir / f"uncertainty_band_{base.name.replace(' ', '_')}.png", dpi=300)
+        if not show_plots:
+            plt.close()
         viz.plot_uncertainty_histogram(tte_samples, base.name)
+        plt.savefig(figures_dir / f"uncertainty_hist_{base.name.replace(' ', '_')}.png", dpi=300)
+        if not show_plots:
+            plt.close()
+
+        if output_cfg.get("enabled", False):
+            mc_dir = output_dir / "monte_carlo"
+            mc_dir.mkdir(parents=True, exist_ok=True)
+            pct_csv = mc_dir / f"uncertainty_percentiles_{base.name.replace(' ', '_')}.csv"
+            pct_data = np.column_stack(
+                [
+                    time_grid,
+                    soc_p5,
+                    soc_p50,
+                    soc_p95,
+                ]
+            )
+            np.savetxt(
+                pct_csv,
+                pct_data,
+                delimiter=",",
+                header="t_s,soc_p5,soc_p50,soc_p95",
+                comments="",
+            )
+            tte_csv = mc_dir / f"uncertainty_tte_{base.name.replace(' ', '_')}.csv"
+            np.savetxt(
+                tte_csv,
+                tte_samples,
+                delimiter=",",
+                header="time_to_empty_s",
+                comments="",
+            )
 
     validation = config.get("validation", {})
     if validation.get("enabled", False):
         data_paths = config.get("data_paths", {})
-        profile_path = validation.get("current_profile_csv") or data_paths.get("nasa_random_csv")
-        if profile_path:
-            profile_path = Path(profile_path)
-            if not profile_path.is_absolute():
-                profile_path = config_file.parent / profile_path
-            time_s, v_pred, v_meas = validate_current_profile(
-                params,
-                profile_path,
-                use_temp_from_csv=bool(validation.get("use_temp_from_csv", True)),
-            )
-            title = f"Validation: {profile_path.name}"
-            viz.plot_voltage_validation(time_s, v_pred, v_meas, title)
+        mode = str(validation.get("mode", "current_profile")).lower()
+        if mode == "ocv_curve":
+            ocv_path = validation.get("ocv_csv") or data_paths.get("calce_ocv_csv")
+            if ocv_path:
+                ocv_path = Path(ocv_path)
+                if not ocv_path.is_absolute():
+                    ocv_path = config_file.parent / ocv_path
+                soc, v_pred, v_meas = validate_ocv_curve(params, ocv_path)
+                title = f"OCV Validation: {ocv_path.name}"
+                viz.plot_ocv_validation(soc, v_pred, v_meas, title)
+                plt.savefig(figures_dir / f"validation_ocv_{ocv_path.stem}.png", dpi=300)
+                if not show_plots:
+                    plt.close()
+        else:
+            profile_path = validation.get("current_profile_csv") or data_paths.get("nasa_random_csv")
+            if profile_path:
+                profile_path = Path(profile_path)
+                if not profile_path.is_absolute():
+                    profile_path = config_file.parent / profile_path
+                calibrate = bool(validation.get("calibrate", False))
+                scale_bounds = validation.get("current_scale_bounds", [0.5, 1.5])
+                scale_bounds = (float(scale_bounds[0]), float(scale_bounds[1]))
+                use_soc_from_csv = bool(validation.get("use_soc_from_csv", False))
+                time_s, v_pred, v_meas, meta = validate_current_profile(
+                    params,
+                    profile_path,
+                    use_temp_from_csv=bool(validation.get("use_temp_from_csv", True)),
+                    calibrate=calibrate,
+                    current_scale_bounds=scale_bounds,
+                    use_soc_from_csv=use_soc_from_csv,
+                )
+                title = f"Validation: {profile_path.name}"
+                if calibrate:
+                    title += (
+                        f" (scale={meta['current_scale']:.3f}, r={meta['r_scale']:.3f}, "
+                        f"ocv={meta['ocv_scale']:.3f}, offset={meta['voltage_offset']:.3f}V)"
+                    )
+                viz.plot_voltage_validation(time_s, v_pred, v_meas, title)
+                plt.savefig(figures_dir / f"validation_{profile_path.stem}.png", dpi=300)
+                if not show_plots:
+                    plt.close()
 
-    output_cfg = config.get("output", {})
     if output_cfg.get("enabled", False):
-        output_dir = Path(output_cfg.get("directory", "outputs"))
-        if not output_dir.is_absolute():
-            output_dir = Path(__file__).resolve().parent / output_dir
-        output_dir.mkdir(parents=True, exist_ok=True)
         output_format = str(output_cfg.get("format", "csv")).lower()
 
         for res in results:
@@ -978,7 +1239,8 @@ def run_scenarios(config_path: str = "config.yaml") -> None:
             else:
                 raise ValueError("output.format must be 'csv' or 'json'.")
 
-    plt.show()
+    if show_plots:
+        plt.show()
 
 
 def parse_args() -> argparse.Namespace:

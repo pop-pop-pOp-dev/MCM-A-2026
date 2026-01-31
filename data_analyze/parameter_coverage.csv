@@ -1,0 +1,48 @@
+parameter,value,units,source,status
+Ea_cal,50000.0,J/mol,model default (config.yaml; OSF aging data available),assumed
+SOC_init,1.0,-,config.yaml,assumed
+SOH_init,1.0,-,config.yaml,assumed
+T_env,298.15,K,config.yaml (baseline ambient),assumed
+T_init,298.15,K,config.yaml,assumed
+T_ref,298.15,K,config.yaml (reference temperature),assumed
+alpha_soc,1.2,-,model default (config.yaml),assumed
+beta_stress,12.0,1/V,model default (config.yaml),assumed
+charger_efficiency,0.9,-,model default (config.yaml),assumed
+eta_coulomb_temp_coeff,0.0008,1/K,model default (config.yaml),assumed
+gamma_scr,1.5,-,model default (config.yaml),assumed
+gps_on_power,0.5,W,recommended smartphone measured GPS (~0.4-0.6W),assumed
+k_stress,5e-10,1/s,model default (config.yaml),assumed
+kibam_c,0.6,-,model default (config.yaml),assumed
+kibam_enabled,True,bool,config.yaml,assumed
+kibam_k,0.0003,1/s,model default (config.yaml),assumed
+lpm_k,20.0,-,model default (config.yaml),assumed
+lpm_min_factor,0.7,-,model default (config.yaml),assumed
+lpm_soc_thresh,0.2,-,model default (config.yaml),assumed
+ocv_model,combined,string,config.yaml (model choice),assumed
+r_soc_coeff,2.5,-,model default (config.yaml),assumed
+r_soc_k,7.0,-,model default (config.yaml),assumed
+r_soh_coeff,1.0,-,model default (config.yaml),assumed
+throttle_k,0.35,-,model default (config.yaml),assumed
+u_thresh,0.45,-,model default (config.yaml),assumed
+v_stress_thresh,4.1,V,model default (config.yaml),assumed
+wifi_active_power,1.5,W,recommended smartphone measured active (~1.2-1.8W),assumed
+wifi_idle_power,0.1,W,recommended smartphone measured idle (~0.1W),assumed
+R_gas,8.314,J/(mol*K),physical constant,constant
+A_area,0.0114,m^2,smartphone_parameters_detailed.csv (A_scr 114 cm2),data_driven
+Cp,780.0,J/(kg*K),smartphone_parameters_detailed.csv (C_p),data_driven
+Ea_R,27538.0,J/mol,derive_params.py (Panasonic 18650PF multi-temp fit),data_driven
+Ea_cap,10100.0,J/mol,derive_params.py (Panasonic 18650PF multi-temp fit),data_driven
+P_big_max,15.0,W,smartphone_parameters_detailed.csv (P_peak_cpu mapped to big cluster),data_driven
+P_idle,0.1,W,smartphone_parameters_detailed.csv (P_idle 0.1 W),data_driven
+P_little_max,6.0,W,smartphone_parameters_detailed.csv (P_game_avg mapped to little cluster),data_driven
+P_max_scr,394.7368,W/m^2,smartphone_parameters_detailed.csv (P_max_scr 4.5 W / A_scr 0.0114 m2),data_driven
+Q_design_ah,5.0,Ah,"smartphone_parameters_detailed.csv (2026通用推荐值, Q_design 5000 mAh)",data_driven
+R_ref,0.03,Ohm,smartphone_parameters_detailed.csv (R_ref 30 mΩ),data_driven
+T_throttle,318.15,K,smartphone_parameters_detailed.csv (T_thresh 45C),data_driven
+V_cutoff,3.0,V,smartphone_parameters_detailed.csv (V_cutoff),data_driven
+eta_coulomb_ref,0.999,-,smartphone_parameters_detailed.csv (eta_coulomb 99.90%),data_driven
+hA,0.275,W/K,smartphone_parameters_detailed.csv (h*A_surf = 11 * 0.025),data_driven
+k_cal,1e-07,1/s,smartphone_parameters_detailed.csv (k_cal 1e-7 1/s),data_driven
+k_cycle,1.111e-08,1/(A*s),smartphone_parameters_detailed.csv (k_cycle 4e-5 1/Ah => /3600),data_driven
+m,0.225,kg,smartphone_parameters_detailed.csv (m),data_driven
+ocv_coeffs,"[4.2, 0.02, 0.4, 0.05, -0.03]",V,fit_params.py output placeholder (update with CALCE fit),data_driven
