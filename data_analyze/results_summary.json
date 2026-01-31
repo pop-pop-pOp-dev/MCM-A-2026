@@ -1,41 +1,41 @@
 [
   {
     "scenario":"Video_Streaming",
-    "t_end_s":4855.0,
-    "soc_end":0.0313413078,
-    "v_end":3.1735288029,
-    "temp_max_k":304.0614199993,
+    "t_end_s":4875.0,
+    "soc_end":0.0294880024,
+    "v_end":3.1679865463,
+    "temp_max_k":304.0501779127,
     "temp_min_k":298.15,
-    "soh_drop":0.0390316182,
-    "avg_power_w":9.4626131094,
-    "energy_wh":12.7623888438,
+    "soh_drop":0.0001967412,
+    "avg_power_w":9.433728172,
+    "energy_wh":12.775806169,
     "dt_s":5.0,
-    "n_points":972
+    "n_points":976
   },
   {
     "scenario":"Gaming",
-    "t_end_s":1955.0,
-    "soc_end":0.089361701,
-    "v_end":3.1815929824,
-    "temp_max_k":311.8113556433,
+    "t_end_s":1980.0,
+    "soc_end":0.0822248659,
+    "v_end":3.1833753077,
+    "temp_max_k":311.8020044868,
     "temp_min_k":298.15,
-    "soh_drop":0.0317586196,
-    "avg_power_w":18.7617703311,
-    "energy_wh":10.189633741,
+    "soh_drop":0.0001600675,
+    "avg_power_w":18.6744108541,
+    "energy_wh":10.2718015448,
     "dt_s":5.0,
-    "n_points":392
+    "n_points":397
   },
   {
     "scenario":"Winter_Usage",
-    "t_end_s":6555.0,
-    "soc_end":0.1431625948,
-    "v_end":3.1699428416,
+    "t_end_s":6615.0,
+    "soc_end":0.1307762817,
+    "v_end":3.1779093998,
     "temp_max_k":298.15,
-    "temp_min_k":277.0754849773,
-    "soh_drop":0.0435390218,
-    "avg_power_w":6.7378506718,
-    "energy_wh":12.2694070132,
+    "temp_min_k":277.0749498145,
+    "soh_drop":0.0002203785,
+    "avg_power_w":6.7122799382,
+    "energy_wh":12.3347437947,
     "dt_s":5.0,
-    "n_points":1312
+    "n_points":1324
   }
 ]

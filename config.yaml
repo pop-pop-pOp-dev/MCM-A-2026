@@ -34,7 +34,7 @@ battery_params:
   eta_coulomb_temp_coeff: 0.0008
 
   # Degradation parameters
-  k_cycle: 2.0e-6           # Cycle aging coefficient [1/(A*s)]
+  k_cycle: 1.0e-8           # Cycle aging coefficient [1/(A*s)]
   k_cal: 1.2e-9             # Calendar aging coefficient [1/s]
   Ea_cal: 50000.0           # Activation energy [J/mol]
   alpha_soc: 1.2            # SOC acceleration factor [-]
