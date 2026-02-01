@@ -15,6 +15,16 @@
 - `solution.py`：主程序（仿真 + 可视化）
 - `config.yaml`：全部参数与场景配置
 - `requirements.txt`：依赖列表
+- `data_analyze/`：实验/分析脚本与汇总结果
+- `outputs/`：实验输出（CSV/PNG/对比图/消融结果）
+- `docs/`：文档与索引（结论、图表索引、实验索引、纲要）
+- `datasets/`：数据集与来源索引（见 `datasets/SOURCES.md`）
+
+## 文档索引
+- 结论文档：`docs/conclusions/CONCLUSION.md`、`docs/conclusions/CONCLUSION.txt`
+- 图表/表格索引：`docs/indices/outputs_index.md`
+- 实验与脚本索引：`docs/indices/experiments_index.md`
+- 论文大纲：`docs/outlines/OUTLINE.txt`
 
 ## 环境与依赖
 建议使用 Python 3.10+。
