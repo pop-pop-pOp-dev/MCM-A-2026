@@ -689,6 +689,49 @@ class Visualizer:
         plt.legend(loc="upper right")
         plt.tight_layout()
 
+    def plot_day_in_life(self, result: SimulationResult) -> None:
+        plt.figure(figsize=(7.4, 4.4))
+        t_hr = result.t / 3600.0
+        soc_pct = result.soc * 100.0
+        temp_c = result.y[2, :] - 273.15
+        ax = plt.gca()
+        ax.plot(t_hr, soc_pct, color="#1f77b4", linewidth=1.6, label="SOC")
+        ax.set_xlabel("Time (h)")
+        ax.set_ylabel("SOC (%)")
+        ax.set_ylim(0, 105)
+        ax2 = ax.twinx()
+        ax2.plot(t_hr, temp_c, color="#e45756", linewidth=1.4, label="Temp")
+        ax2.set_ylabel("Temperature (C)")
+        ax.set_title(f"Day in the Life: SOC & Temperature ({result.scenario.name})")
+        lines = ax.get_lines() + ax2.get_lines()
+        labels = [line.get_label() for line in lines]
+        ax.legend(lines, labels, loc="upper right")
+        plt.tight_layout()
+
+    def plot_climate_stress(
+        self,
+        results: List[SimulationResult],
+        temps_c: List[float],
+        base_name: str,
+    ) -> None:
+        plt.figure(figsize=(7.6, 7.2))
+        colors = sns.color_palette("mako", n_colors=len(results))
+        axes = [plt.subplot(3, 1, i + 1) for i in range(3)]
+        for idx, res in enumerate(results):
+            t_hr = res.t / 3600.0
+            label = f"{temps_c[idx]:.0f}C"
+            axes[0].plot(t_hr, res.soc * 100.0, color=colors[idx], linewidth=1.4, label=label)
+            axes[1].plot(t_hr, res.voltages["V_term"], color=colors[idx], linewidth=1.4, label=label)
+            axes[2].plot(t_hr, res.y[2, :] - 273.15, color=colors[idx], linewidth=1.4, label=label)
+        axes[0].set_ylabel("SOC (%)")
+        axes[1].set_ylabel("Voltage (V)")
+        axes[2].set_ylabel("Temp (C)")
+        axes[2].set_xlabel("Time (h)")
+        axes[0].set_title(f"Climate Stress Test: {base_name}")
+        for ax in axes:
+            ax.legend(ncol=3, fontsize=8, loc="upper right")
+        plt.tight_layout()
+
     def plot_sensitivity_heatmap(
         self,
         times: np.ndarray,
@@ -1030,6 +1073,11 @@ def run_scenarios(config_path: str = "config.yaml") -> None:
         plt.savefig(figures_dir / f"power_decomposition_{res.scenario.name.replace(' ', '_')}.png", dpi=300)
         if not show_plots:
             plt.close()
+        if res.scenario.name.lower() == "day in the life":
+            viz.plot_day_in_life(res)
+            plt.savefig(figures_dir / "day_in_life_soc_temp.png", dpi=300)
+            if not show_plots:
+                plt.close()
 
     if viz_cfg.get("realtime", False):
         interval_ms = int(viz_cfg.get("interval_ms", 80))
@@ -1046,6 +1094,70 @@ def run_scenarios(config_path: str = "config.yaml") -> None:
                 save_dir=frames_dir if save_frames else None,
                 frame_stride=frame_stride,
                 show=show_plots,
+            )
+
+    climate_cfg = config.get("climate_stress", {})
+    if climate_cfg.get("enabled", False):
+        base_name = climate_cfg.get("base_scenario", "Gaming")
+        base = scenarios[0]
+        for sc in scenarios:
+            if sc.name == base_name:
+                base = sc
+                break
+        temps_c = [float(t) for t in climate_cfg.get("temps_c", [0, 25, 40])]
+        climate_results: List[SimulationResult] = []
+        for temp_c in temps_c:
+            scenario = Scenario(
+                name=f"{base.name} {temp_c:.0f}C",
+                duration_s=base.duration_s,
+                dt=base.dt,
+                env_temp_k=temp_c + 273.15,
+                brightness=base.brightness,
+                apl=base.apl,
+                cpu_util=base.cpu_util,
+                wifi_state=base.wifi_state,
+                gps_state=base.gps_state,
+                charger_power=base.charger_power,
+                eta_radiation=base.eta_radiation,
+            )
+            climate_results.append(system.solve(scenario, solver_cfg))
+        viz.plot_climate_stress(climate_results, temps_c, base.name)
+        plt.savefig(figures_dir / f"climate_stress_{base.name.replace(' ', '_')}.png", dpi=300)
+        if not show_plots:
+            plt.close()
+        if output_cfg.get("enabled", False):
+            summary_rows = []
+            for res, temp_c in zip(climate_results, temps_c):
+                summary_rows.append(
+                    {
+                        "scenario": res.scenario.name,
+                        "temp_c": temp_c,
+                        "t_end_s": float(res.t[-1]),
+                        "tte_h": float(res.time_to_empty_s / 3600.0),
+                        "soc_end": float(res.soc[-1]),
+                        "v_end": float(res.voltages["V_term"][-1]),
+                        "temp_max_c": float(np.max(res.y[2, :] - 273.15)),
+                    }
+                )
+            summary_path = output_dir / f"climate_stress_summary_{base.name.replace(' ', '_')}.csv"
+            np.savetxt(
+                summary_path,
+                np.array(
+                    [
+                        [
+                            row["temp_c"],
+                            row["t_end_s"],
+                            row["tte_h"],
+                            row["soc_end"],
+                            row["v_end"],
+                            row["temp_max_c"],
+                        ]
+                        for row in summary_rows
+                    ]
+                ),
+                delimiter=",",
+                header="temp_c,t_end_s,tte_h,soc_end,v_end,temp_max_c",
+                comments="",
             )
 
     sensitivity = config.get("sensitivity", {})

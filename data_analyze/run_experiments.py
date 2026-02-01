@@ -54,6 +54,8 @@ def ensure_dir(path: Path) -> None:
 
 def summarize_output(path: Path) -> Dict[str, Any]:
     df = pd.read_csv(path)
+    if "t_s" not in df.columns:
+        raise ValueError(f"Missing t_s column in {path.name}")
     dt = float(df.t_s.iloc[1] - df.t_s.iloc[0]) if len(df) > 1 else 0.0
     energy_wh = float(np.trapz(df.p_total, df.t_s) / 3600.0)
     return {
@@ -234,6 +236,12 @@ def build_experiments() -> List[Experiment]:
             },
         ),
         Experiment(
+            exp_id="ablation_no_polarization",
+            label="Ablation: no polarization (RC off)",
+            group="ablation",
+            overrides={"battery_params": {"rc_enabled": False}},
+        ),
+        Experiment(
             exp_id="ablation_no_calibration",
             label="Ablation: no calibration",
             group="ablation",
@@ -261,6 +269,7 @@ def plot_comparison(summary: pd.DataFrame, out_dir: Path) -> None:
             "Full model (RC + temp corr + calib)": "FullModel",
             "Ablation: no Monte Carlo": "NoMC",
             "Ablation: freeze thermal coupling": "NoThermal",
+            "Ablation: no polarization (RC off)": "NoPolar",
             "Ablation: no calibration": "NoCalib",
         }
         return mapping.get(label, label)
@@ -353,7 +362,10 @@ def main() -> None:
         for scenario_csv in exp_dir.glob("*.csv"):
             if scenario_csv.name in {"summary.csv", "validation_metrics.csv"}:
                 continue
-            row = summarize_output(scenario_csv)
+            try:
+                row = summarize_output(scenario_csv)
+            except ValueError:
+                continue
             scenario_rows.append(row)
 
         validation = validation_metrics(cfg) or {}

@@ -1,6 +1,7 @@
 # 结论与答复（基于当前实验结果）
 
 本文档基于**最新一次实验输出**与模型代码，系统性回答题目要求的全部问题，并给出证据路径（图表/数据文件）。
+本次已将**上次主运行结果**与**本次消融实验结果**一并纳入结论。
 
 ## 1. 连续时间仿真是否完成？
 **结论：完成。**  
@@ -58,6 +59,22 @@ OCV 由真实手机数据拟合，低 SOC/高 SOC 端点稳定性更好。
 - 场景能耗与时间统计：`data_analyze/pic/scenario_energy.png`、`data_analyze/pic/scenario_time_to_empty.png`  
 - 场景结论汇总：`data_analyze/conclusions.md`
 
+## 6.1 新增场景：Day in the Life（全天混合负载）
+**结论：完成，并证明长期连续仿真的稳定性。**  
+可连续输出 12h SOC/温度序列，体现 ODE 解算在长时段下的稳定性与可解释性。
+
+**证据：**  
+- 结果数据：`outputs/Day_in_the_Life.csv`  
+- 可视化：`outputs/figures/day_in_life_soc_temp.png`  
+
+## 6.2 新增对比：Climate Stress Test（气候压力矩阵）
+**结论：完成。**  
+同一负载下 0°C/25°C/40°C 的电压、SOC、温度可视化对比已生成。
+
+**证据：**  
+- 叠加对比图：`outputs/figures/climate_stress_Gaming.png`  
+- 汇总数据：`outputs/climate_stress_summary_Gaming.csv`  
+
 ## 7. 智能化建议是否具备“模型支撑”？
 **结论：具备。**  
 建议基于功耗分解、温度‑内阻耦合与电压截止行为给出。
@@ -88,6 +105,19 @@ OCV 由真实手机数据拟合，低 SOC/高 SOC 端点稳定性更好。
 5. **不确定性量化**已提供 Monte Carlo 置信区间与统计分布。  
 6. **场景对比**完整且结果一致，具有可视化证据与数据支撑。  
 7. **模型驱动建议**可基于功耗/温度/内阻耦合给出可执行策略。  
+
+## 9.1 消融实验（Why Complexity Matters）
+**结论：复杂耦合模型优于简化模型。**  
+禁用热耦合/极化/校准会改变 RMSE/MAE 与续航预测，证明耦合模型必要性。
+
+**证据（本次消融实验）：**  
+- 消融总汇总表：`outputs/experiments/run_20260201_151319/summary.csv`  
+- 消融对比图（RMSE/MAE/能耗/时间/峰温）：  
+  `outputs/experiments/run_20260201_151319/comparison_figures/comparison_rmse_v.png`  
+  `outputs/experiments/run_20260201_151319/comparison_figures/comparison_mae_v.png`  
+  `outputs/experiments/run_20260201_151319/comparison_figures/comparison_energy_wh.png`  
+  `outputs/experiments/run_20260201_151319/comparison_figures/comparison_t_end_s.png`  
+  `outputs/experiments/run_20260201_151319/comparison_figures/comparison_temp_max_k.png`  
 
 ## 10. 老化历史效应的对比验证（Time Scale Separation）
 **结论：SOH 变化在单次放电中很小，但“历史差异”在对比实验中表现显著。**  

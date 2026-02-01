@@ -1,6 +1,7 @@
 结论与答复（基于当前实验结果）
 
 本文档基于最新一次实验输出与模型代码，系统性回答题目要求的全部问题，并给出证据路径（图表/数据文件）。
+本次已将上次主运行结果与本次消融实验结果一并纳入结论。
 
 1. 连续时间仿真是否完成？
 结论：完成。
@@ -52,6 +53,18 @@ OCV 由真实手机数据拟合，低 SOC/高 SOC 端点稳定性更好。
 - 场景能耗与时间统计：data_analyze/pic/scenario_energy.png、data_analyze/pic/scenario_time_to_empty.png
 - 场景结论汇总：data_analyze/conclusions.md
 
+6.1 新增场景：Day in the Life（全天混合负载）
+结论：完成，并证明长期连续仿真的稳定性。
+证据：
+- 结果数据：outputs/Day_in_the_Life.csv
+- 可视化：outputs/figures/day_in_life_soc_temp.png
+
+6.2 新增对比：Climate Stress Test（气候压力矩阵）
+结论：完成。
+证据：
+- 叠加对比图：outputs/figures/climate_stress_Gaming.png
+- 汇总数据：outputs/climate_stress_summary_Gaming.csv
+
 7. 智能化建议是否具备“模型支撑”？
 结论：具备。
 建议基于功耗分解、温度‑内阻耦合与电压截止行为给出。
@@ -80,6 +93,17 @@ OCV 由真实手机数据拟合，低 SOC/高 SOC 端点稳定性更好。
 5) 不确定性量化已提供 Monte Carlo 置信区间与统计分布。
 6) 场景对比完整且结果一致，具有可视化证据与数据支撑。
 7) 模型驱动建议可基于功耗/温度/内阻耦合给出可执行策略。
+
+9.1 消融实验（Why Complexity Matters）
+结论：复杂耦合模型优于简化模型。
+证据（本次消融实验）：
+- 消融总汇总表：outputs/experiments/run_20260201_151319/summary.csv
+- 消融对比图：
+  outputs/experiments/run_20260201_151319/comparison_figures/comparison_rmse_v.png
+  outputs/experiments/run_20260201_151319/comparison_figures/comparison_mae_v.png
+  outputs/experiments/run_20260201_151319/comparison_figures/comparison_energy_wh.png
+  outputs/experiments/run_20260201_151319/comparison_figures/comparison_t_end_s.png
+  outputs/experiments/run_20260201_151319/comparison_figures/comparison_temp_max_k.png
 
 若需继续冲击 O 奖标准，建议进一步将极化 RC 参数与温度电压修正系数纳入校准，以减少剩余系统偏差。
 

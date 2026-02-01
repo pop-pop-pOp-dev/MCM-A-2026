@@ -5,6 +5,12 @@
 - Gaming: t_end=1980s, energy=10.27Wh, v_end=3.183V, soc_end=0.082
 - Winter_Usage: t_end=6615s, energy=12.33Wh, v_end=3.178V, soc_end=0.131
 
+## New Experiments (Latest Run)
+- Day-in-the-Life scenario: `outputs/Day_in_the_Life.csv`
+- Climate stress (0/25/40C): `outputs/figures/climate_stress_Gaming.png` and `outputs/climate_stress_summary_Gaming.csv`
+- Ablations summary: `outputs/experiments/run_20260201_151319/summary.csv`
+- Ablation comparisons: `outputs/experiments/run_20260201_151319/comparison_figures/`
+
 ## Validation
 - Mode=current_profile, RMSE=0.0232 V, MAE=0.0187 V on 344 samples (profile: phone_validation_bcm_s9_combined.csv, scale=0.800, r=0.700, ocv=0.984, offset=0.075V).
 

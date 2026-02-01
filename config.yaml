@@ -121,6 +121,48 @@ scenarios:
     gps_state: {type: constant, value: 0}
     charger_power: {type: constant, value: 0.0}
 
+  - name: Day in the Life
+    duration_s: 43200
+    dt: 10
+    env_temp_k: 298.15
+    eta_radiation: 0.03
+    brightness:
+      type: piecewise
+      segments:
+        - {start: 0, end: 14400, value: 0.15}   # 08:00-12:00 Standby
+        - {start: 14400, end: 18000, value: 0.95} # 12:00-13:00 Gaming
+        - {start: 18000, end: 36000, value: 0.65} # 13:00-18:00 Social
+        - {start: 36000, end: null, value: 0.80}  # 18:00-20:00 Video
+    apl:
+      type: piecewise
+      segments:
+        - {start: 0, end: 14400, value: 0.20}
+        - {start: 14400, end: 18000, value: 0.90}
+        - {start: 18000, end: 36000, value: 0.60}
+        - {start: 36000, end: null, value: 0.70}
+    cpu_util:
+      type: piecewise
+      segments:
+        - {start: 0, end: 14400, value: 0.10}
+        - {start: 14400, end: 18000, value: 0.90}
+        - {start: 18000, end: 36000, value: 0.50}
+        - {start: 36000, end: null, value: 0.40}
+    wifi_state:
+      type: piecewise
+      segments:
+        - {start: 0, end: 14400, value: 1}
+        - {start: 14400, end: 18000, value: 1}
+        - {start: 18000, end: 36000, value: 2}
+        - {start: 36000, end: null, value: 2}
+    gps_state:
+      type: piecewise
+      segments:
+        - {start: 0, end: 14400, value: 0}
+        - {start: 14400, end: 18000, value: 1}
+        - {start: 18000, end: 36000, value: 0}
+        - {start: 36000, end: null, value: 0}
+    charger_power: {type: constant, value: 0.0}
+
 sensitivity:
   base_scenario: "Video Streaming"
   duration_s: 28800
@@ -155,6 +197,11 @@ data_paths:
   aosp_power_profile_xml: datasets/aosp_power_profile/power_profile.xml
   phone_validation_csv: datasets/phone_validation/phone_validation_wltp.csv
   phone_validation_real_csv: datasets/phone_validation_real/phone_validation_bcm_s9_combined.csv
+
+climate_stress:
+  enabled: true
+  base_scenario: "Gaming"
+  temps_c: [0, 25, 40]
 
 validation:
   enabled: true

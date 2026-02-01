@@ -1,0 +1,150 @@
+2026 MCM Problem A 论文大纲（校正版，含图表与篇幅分配）
+
+Title（建议标题）
+A Continuous-Time Thermo-Electric Coupled Dynamical System for Smartphone Battery Modeling: From Micro-Mechanism to Macro-Aging
+（基于微观机理到宏观老化的智能手机电池热-电耦合连续动力学系统）
+
+Abstract（摘要，200–300 words）
+- 论述重点：问题复杂性（非线性、多物理场耦合、历史依赖）、连续时间动力学建模、数据驱动参数辨识、验证与不确定性、核心结论。
+- 需强调优势与工作量：多数据源拟合、独立手机验证、消融实验、蒙特卡洛不确定性、SOH 历史对比。
+- 可引用结果：RMSE≈0.023 V（验证）。
+- 图表：无
+
+1. Introduction（引言，500–700 words）
+1.1 Background & Motivation
+- 论述重点：电量预测难点、Voltage Sag、热–电反馈、老化影响。
+- 工作量与优势强调：连续时间模型、微观机理与数据融合。
+- 图：可选示意图（自制）
+1.2 Problem Restatement
+- 论述重点：将题目转化为目标函数 SOC(t)=f(Load, Temp, History)。
+1.3 Our Approach Overview
+- 论述重点：整体流程和模块协同，强调“可验证、可解释、可复现”。
+- 图：逻辑流程图（自制）
+
+2. Assumptions & Notations（假设与符号，300–450 words）
+- 论述重点：集总热模型、Arrhenius 老化、功耗–负载非线性、SOH 历史。
+- 表 1：符号表（自制）
+
+3. Modeling of Smartphone Components（负载端建模，800–1000 words）
+3.1 Screen Model
+- 论述重点：亮度–APL–功耗的非线性关系。
+3.2 Processor Model
+- 论述重点：big.LITTLE、热节流（sigmoid）。
+3.3 Network/GPS Model
+- 论述重点：状态机功耗。
+- 图 1：功耗分解图（Gaming）
+  路径：outputs/experiments/run_20260131_162846/full_model/figures/power_decomposition_Gaming.png
+- 表 2：功耗参数表
+  路径：data_analyze/parameters_table.csv
+
+4. The Thermo‑Electric Coupled Dynamical System（核心模型，1200–1600 words）
+4.1 Electrical Subsystem (OCV + R_int + RC)
+- 论述重点：端电压 vs OCV、RC 极化、Voltage Sag。
+- 图 2：OCV 拟合曲线
+  路径：data_analyze/pic/ocv_curve.png
+- 图 3：电压下垂（Gaming）
+  路径：outputs/experiments/run_20260131_162846/full_model/figures/voltage_sag_Gaming.png
+4.2 Thermal Subsystem
+- 论述重点：I^2R + 负载热 + 对流散热；温度反馈内阻。
+- 图 4：内阻–SOC–温度曲面
+  路径：data_analyze/pic/rint_surface_3d.png
+4.3 Aging & History Subsystem
+- 论述重点：dSOH/dt 包含循环与日历老化；历史效应通过 R_int 反馈。
+- 图 5：激活能拟合
+  路径：data_analyze/pic/activation_energies.png
+4.4 System Integration (ODEs)
+- 论述重点：四状态 ODE 组 (SOC, T, SOH, V_rc) + 连续时间求解。
+- 表 3：ODE 变量与物理意义（自制）
+
+5. Parameter Identification & Validation（参数辨识与验证，900–1200 words）
+5.1 Data Sources
+- 论述重点：CALCE + Panasonic 18650PF（拟合与温度参数），BCMes 手机数据（验证）。
+- 表 4：数据集来源与用途
+  路径：datasets/SOURCES.md（整理成表）
+5.2 OCV & Arrhenius Fitting
+- 论述重点：拟合流程、误差、可复现性。
+- 图 6：OCV 拟合图（同图 2，可引用）
+  路径：data_analyze/pic/ocv_curve.png
+5.3 Validation Results
+- 论述重点：模型与真实手机电压对齐，RMSE/MAE。
+- 图 7：验证曲线（BCMes）
+  路径：outputs/experiments/run_20260131_162846/full_model/figures/validation_phone_validation_bcm_s9_combined.png
+- 表 5：验证误差汇总
+  路径：outputs/experiments/run_20260131_162846/summary.csv（提取 rmse_v/mae_v）
+5.4 Ablation Study
+- 论述重点：Full vs NoCalib vs NoThermal 等，说明复杂度必要性。
+- 图 8：RMSE 对比柱状图
+  路径：outputs/experiments/run_20260131_162846/comparison_figures/comparison_rmse_v.png
+- 图 9：MAE 对比柱状图
+  路径：outputs/experiments/run_20260131_162846/comparison_figures/comparison_mae_v.png
+- 表 6：消融结果表
+  路径：outputs/experiments/run_20260131_162846/summary.csv
+
+6. Simulation Results & Scenario Analysis（场景结果分析，1200–1600 words）
+6.1 Scenario Comparison (Video/Gaming/Winter)
+- 论述重点：TTE、能耗、温度差异与原因。
+- 图 10：场景能耗对比
+  路径：outputs/experiments/run_20260131_162846/comparison_figures/comparison_energy_wh.png
+- 图 11：场景 TTE 对比
+  路径：outputs/experiments/run_20260131_162846/comparison_figures/comparison_t_end_s.png
+- 图 12：场景温度对比
+  路径：outputs/experiments/run_20260131_162846/comparison_figures/comparison_temp_max_k.png
+- 表 7：场景汇总表
+  路径：outputs/experiments/run_20260131_162846/summary.csv
+6.2 Thermal Death Spiral
+- 论述重点：低 SOC 下 Voltage Sag 与温升的正反馈链条。
+- 图 13：相图（SOC–T）
+  路径：outputs/experiments/run_20260131_162846/full_model/figures/phase_portrait.png
+6.3 Power Decomposition Insight
+- 论述重点：CPU/屏幕在高负载下的能耗支配作用。
+- 图 14：功耗分解（Video/Gaming/Winter 任选其二）
+  路径：outputs/experiments/run_20260131_162846/full_model/figures/power_decomposition_Video_Streaming.png
+  路径：outputs/experiments/run_20260131_162846/full_model/figures/power_decomposition_Winter_Usage.png
+
+7. History & Aging Comparative Study（历史老化对比，700–1000 words）
+- 论述重点：Time Scale Separation 的“修补”，用不同 SOH_init 展示历史差异。
+- 图 15：SOH 电压对比曲线
+  路径：outputs/soh_comparison/20260131_195801/soh_voltage_time.png
+- 图 16：SOH 温度对比曲线
+  路径：outputs/soh_comparison/20260131_195801/soh_temp_time.png
+- 图 17：SOH 能耗对比柱状图
+  路径：outputs/soh_comparison/20260131_195801/soh_energy_bar.png
+- 表 8：SOH 对比原始数据
+  路径：outputs/soh_comparison/20260131_195801/soh_comparison.csv
+
+8. Sensitivity & Uncertainty Analysis（灵敏度与不确定性，700–1000 words）
+8.1 Sensitivity
+- 论述重点：亮度与环境温度对 TTE 的影响。
+- 图 18：灵敏度热力图
+  路径：data_analyze/pic/sensitivity_heatmap.png（由 sensitivity 模块生成）
+8.2 Monte Carlo Uncertainty
+- 论述重点：给出 SOC 置信区间与 TTE 分布。
+- 图 19：不确定性置信带
+  路径：outputs/experiments/run_20260131_162846/full_model/figures/uncertainty_band_Video_Streaming.png
+- 图 20：不确定性分布
+  路径：outputs/experiments/run_20260131_162846/full_model/figures/uncertainty_hist_Video_Streaming.png
+- 表 9：MC 百分位数据
+  路径：outputs/experiments/run_20260131_162846/full_model/monte_carlo/uncertainty_percentiles_Video_Streaming.csv
+- 表 10：MC TTE 分布
+  路径：outputs/experiments/run_20260131_162846/full_model/monte_carlo/uncertainty_tte_Video_Streaming.csv
+
+9. Recommendations & Practical Insights（建议与应用，400–600 words）
+- 论述重点：低 SOC 限流、热管理策略、网络模块调度等。
+- 图：可引用功耗分解图与相图（复用图 13/14）
+
+10. Conclusion & Future Work（结论与展望，400–600 words）
+10.1 Key Findings
+- 论述重点：连续时间建模的优势、热‑电耦合的重要性、历史效应的非线性影响。
+10.2 Strengths & Limitations
+- 论述重点：机理强、验证强、数据驱动；局限为缺少空间分布化学模型。
+10.3 Future Work
+- 论述重点：更高频手机数据、RC 参数校准、加入多支路极化与更细化热模型。
+
+References（参考文献，10–15 篇）
+- 必含：CALCE 数据集、Panasonic 18650PF 温度数据、KiBaM 原始论文、Peukert 原始论文。
+
+附：主要结果与路径索引（便于排版）
+- 实验套件总目录：outputs/experiments/run_20260131_162846/
+- 统一可视化：outputs/experiments/run_20260131_162846/visuals_all/
+- SOH 对比实验：outputs/soh_comparison/20260131_195801/
+*** End Patch}
