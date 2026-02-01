@@ -1,0 +1,50 @@
+[
+  {
+    "experiment_id": "baseline_ocv_r",
+    "label": "Baseline (OCV-R only, no temp corr, no RC, no calib)",
+    "group": "baseline",
+    "directory": "D:\\MCM\\outputs\\experiments\\run_20260201_151319\\baseline_ocv_r"
+  },
+  {
+    "experiment_id": "temp_only",
+    "label": "Temp correction only (no RC, no calib)",
+    "group": "baseline",
+    "directory": "D:\\MCM\\outputs\\experiments\\run_20260201_151319\\temp_only"
+  },
+  {
+    "experiment_id": "rc_only",
+    "label": "RC only (no temp corr, no calib)",
+    "group": "baseline",
+    "directory": "D:\\MCM\\outputs\\experiments\\run_20260201_151319\\rc_only"
+  },
+  {
+    "experiment_id": "full_model",
+    "label": "Full model (RC + temp corr + calib)",
+    "group": "baseline",
+    "directory": "D:\\MCM\\outputs\\experiments\\run_20260201_151319\\full_model"
+  },
+  {
+    "experiment_id": "ablation_no_mc",
+    "label": "Ablation: no Monte Carlo",
+    "group": "ablation",
+    "directory": "D:\\MCM\\outputs\\experiments\\run_20260201_151319\\ablation_no_mc"
+  },
+  {
+    "experiment_id": "ablation_no_thermal",
+    "label": "Ablation: freeze thermal coupling",
+    "group": "ablation",
+    "directory": "D:\\MCM\\outputs\\experiments\\run_20260201_151319\\ablation_no_thermal"
+  },
+  {
+    "experiment_id": "ablation_no_polarization",
+    "label": "Ablation: no polarization (RC off)",
+    "group": "ablation",
+    "directory": "D:\\MCM\\outputs\\experiments\\run_20260201_151319\\ablation_no_polarization"
+  },
+  {
+    "experiment_id": "ablation_no_calibration",
+    "label": "Ablation: no calibration",
+    "group": "ablation",
+    "directory": "D:\\MCM\\outputs\\experiments\\run_20260201_151319\\ablation_no_calibration"
+  }
+]

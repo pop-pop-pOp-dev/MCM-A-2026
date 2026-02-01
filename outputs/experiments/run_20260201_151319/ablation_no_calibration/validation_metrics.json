@@ -1,0 +1,11 @@
+{
+  "profile": "phone_validation_bcm_s9_combined.csv",
+  "rmse_v": 0.036969485027835605,
+  "mae_v": 0.031225305510610698,
+  "n": 344,
+  "mode": "current_profile",
+  "current_scale": 1.0,
+  "r_scale": 1.0,
+  "ocv_scale": 1.0,
+  "voltage_offset": 0.0
+}

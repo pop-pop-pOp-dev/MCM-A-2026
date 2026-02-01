@@ -1,0 +1,289 @@
+battery_params:
+  Q_design_ah: 4.0
+  V_cutoff: 3.0
+  m: 0.045
+  Cp: 900.0
+  hA: 1.8
+  T_env: 298.15
+  ocv_model: combined
+  ocv_coeffs:
+  - 3.1641369763126996
+  - 0.013329434532685864
+  - -0.9746467060946551
+  - -0.22504836405236922
+  - -0.024197927338674676
+  ocv_temp_ref: 298.15
+  ocv_temp_coeff: 0.0
+  ocv_temp_quad: 0.0
+  R_ref: 0.06
+  T_ref: 298.15
+  Ea_R: 27538.0
+  R_gas: 8.314
+  r_soc_coeff: 2.5
+  r_soc_k: 7.0
+  r_soh_coeff: 1.0
+  eta_coulomb_ref: 0.995
+  eta_coulomb_temp_coeff: 0.0008
+  k_cycle: 1.0e-08
+  k_cal: 1.2e-09
+  Ea_cal: 50000.0
+  alpha_soc: 1.2
+  Ea_cap: 10100.0
+  kibam_enabled: true
+  kibam_c: 0.6
+  kibam_k: 0.0003
+  rc_enabled: true
+  r_polar: 0.015
+  c_polar: 1200.0
+  P_max_scr: 400.0
+  A_area: 0.0075
+  gamma_scr: 1.5
+  P_idle: 0.6
+  P_little_max: 6.0
+  P_big_max: 15.0
+  u_thresh: 0.45
+  T_throttle: 318.15
+  throttle_k: 0.35
+  wifi_idle_power: 0.1
+  wifi_active_power: 1.5
+  gps_on_power: 0.5
+  lpm_soc_thresh: 0.2
+  lpm_k: 20.0
+  lpm_min_factor: 0.7
+  charger_efficiency: 0.9
+  v_stress_thresh: 4.1
+  k_stress: 5.0e-10
+  beta_stress: 12.0
+  SOC_init: 1.0
+  T_init: 298.15
+  SOH_init: 1.0
+scenarios:
+- name: Video Streaming
+  duration_s: 21600
+  dt: 5
+  env_temp_k: 298.15
+  eta_radiation: 0.03
+  brightness:
+    type: constant
+    value: 0.85
+  apl:
+    type: constant
+    value: 0.7
+  cpu_util:
+    type: constant
+    value: 0.45
+  wifi_state:
+    type: constant
+    value: 2
+  gps_state:
+    type: constant
+    value: 1
+  charger_power:
+    type: constant
+    value: 0.0
+- name: Gaming
+  duration_s: 14400
+  dt: 5
+  env_temp_k: 300.15
+  eta_radiation: 0.03
+  brightness:
+    type: constant
+    value: 0.95
+  apl:
+    type: constant
+    value: 0.8
+  cpu_util:
+    type: constant
+    value: 0.9
+  wifi_state:
+    type: constant
+    value: 1
+  gps_state:
+    type: constant
+    value: 1
+  charger_power:
+    type: constant
+    value: 0.0
+- name: Winter Usage
+  duration_s: 25200
+  dt: 5
+  env_temp_k: 273.15
+  eta_radiation: 0.03
+  brightness:
+    type: constant
+    value: 0.6
+  apl:
+    type: constant
+    value: 0.6
+  cpu_util:
+    type: constant
+    value: 0.4
+  wifi_state:
+    type: constant
+    value: 1
+  gps_state:
+    type: constant
+    value: 0
+  charger_power:
+    type: constant
+    value: 0.0
+- name: Day in the Life
+  duration_s: 43200
+  dt: 10
+  env_temp_k: 298.15
+  eta_radiation: 0.03
+  brightness:
+    type: piecewise
+    segments:
+    - start: 0
+      end: 14400
+      value: 0.15
+    - start: 14400
+      end: 18000
+      value: 0.95
+    - start: 18000
+      end: 36000
+      value: 0.65
+    - start: 36000
+      end: null
+      value: 0.8
+  apl:
+    type: piecewise
+    segments:
+    - start: 0
+      end: 14400
+      value: 0.2
+    - start: 14400
+      end: 18000
+      value: 0.9
+    - start: 18000
+      end: 36000
+      value: 0.6
+    - start: 36000
+      end: null
+      value: 0.7
+  cpu_util:
+    type: piecewise
+    segments:
+    - start: 0
+      end: 14400
+      value: 0.1
+    - start: 14400
+      end: 18000
+      value: 0.9
+    - start: 18000
+      end: 36000
+      value: 0.5
+    - start: 36000
+      end: null
+      value: 0.4
+  wifi_state:
+    type: piecewise
+    segments:
+    - start: 0
+      end: 14400
+      value: 1
+    - start: 14400
+      end: 18000
+      value: 1
+    - start: 18000
+      end: 36000
+      value: 2
+    - start: 36000
+      end: null
+      value: 2
+  gps_state:
+    type: piecewise
+    segments:
+    - start: 0
+      end: 14400
+      value: 0
+    - start: 14400
+      end: 18000
+      value: 1
+    - start: 18000
+      end: 36000
+      value: 0
+    - start: 36000
+      end: null
+      value: 0
+  charger_power:
+    type: constant
+    value: 0.0
+sensitivity:
+  base_scenario: Video Streaming
+  duration_s: 28800
+  dt: 10
+  brightness_grid:
+    type: linspace
+    start: 0.2
+    end: 1.0
+    num: 9
+  temp_grid_c:
+    type: linspace
+    start: -5
+    end: 35
+    num: 9
+uncertainty:
+  enabled: true
+  base_scenario: Video Streaming
+  n_samples: 50
+  seed: 42
+  perturb:
+    hA:
+      std_frac: 0.1
+      min: 0.5
+      max: 3.5
+    R_ref:
+      std_frac: 0.1
+      min: 0.02
+      max: 0.15
+    Ea_R:
+      std_frac: 0.1
+      min: 8000
+      max: 40000
+    k_cycle:
+      std_frac: 0.2
+      min: 1.0e-07
+      max: 1.0e-05
+data_paths:
+  calce_ocv_csv: D:\MCM\datasets\calce_ocv\cs2_8_ocv_curve.csv
+  nasa_random_csv: D:\MCM\datasets\nasa_random\rw17_standard.csv
+  panasonic_temp_csv: D:\MCM\datasets\panasonic_temp\n10degC_cycle1_standard.csv
+  aging_chalmers_dir: D:\MCM\datasets\aging_chalmers
+  aosp_power_profile_xml: D:\MCM\datasets\aosp_power_profile\power_profile.xml
+  phone_validation_csv: D:\MCM\datasets\phone_validation\phone_validation_wltp.csv
+  phone_validation_real_csv: D:\MCM\datasets\phone_validation_real\phone_validation_bcm_s9_combined.csv
+climate_stress:
+  enabled: true
+  base_scenario: Gaming
+  temps_c:
+  - 0
+  - 25
+  - 40
+validation:
+  enabled: true
+  mode: current_profile
+  current_profile_csv: D:\MCM\datasets\phone_validation_real\phone_validation_bcm_s9_combined.csv
+  use_temp_from_csv: true
+  calibrate: false
+  current_scale_bounds:
+  - 0.8
+  - 1.2
+  use_soc_from_csv: true
+output:
+  enabled: true
+  format: csv
+  directory: D:\MCM\outputs\experiments\run_20260201_151319\rc_only
+solver:
+  method: DOP853
+  rtol: 1.0e-08
+  atol: 1.0e-10
+  max_step: 5.0
+visualization:
+  realtime: false
+  interval_ms: 80
+  max_points: 300
+  frame_stride: 50
+  save_frames: false
+  show: false
