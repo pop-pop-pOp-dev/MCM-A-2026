@@ -28,21 +28,21 @@ v_stress_thresh,4.1,V,model default (config.yaml),assumed
 wifi_active_power,1.5,W,recommended smartphone measured active (~1.2-1.8W),assumed
 wifi_idle_power,0.1,W,recommended smartphone measured idle (~0.1W),assumed
 R_gas,8.314,J/(mol*K),physical constant,constant
-A_area,0.0114,m^2,smartphone_parameters_detailed.csv (A_scr 114 cm2),data_driven
-Cp,780.0,J/(kg*K),smartphone_parameters_detailed.csv (C_p),data_driven
-Ea_R,27538.0,J/mol,derive_params.py (Panasonic 18650PF multi-temp fit),data_driven
-Ea_cap,10100.0,J/mol,derive_params.py (Panasonic 18650PF multi-temp fit),data_driven
-P_big_max,15.0,W,smartphone_parameters_detailed.csv (P_peak_cpu mapped to big cluster),data_driven
-P_idle,0.1,W,smartphone_parameters_detailed.csv (P_idle 0.1 W),data_driven
-P_little_max,6.0,W,smartphone_parameters_detailed.csv (P_game_avg mapped to little cluster),data_driven
-P_max_scr,394.7368,W/m^2,smartphone_parameters_detailed.csv (P_max_scr 4.5 W / A_scr 0.0114 m2),data_driven
-Q_design_ah,5.0,Ah,"smartphone_parameters_detailed.csv (2026通用推荐值, Q_design 5000 mAh)",data_driven
-R_ref,0.03,Ohm,smartphone_parameters_detailed.csv (R_ref 30 mΩ),data_driven
-T_throttle,318.15,K,smartphone_parameters_detailed.csv (T_thresh 45C),data_driven
-V_cutoff,3.0,V,smartphone_parameters_detailed.csv (V_cutoff),data_driven
-eta_coulomb_ref,0.999,-,smartphone_parameters_detailed.csv (eta_coulomb 99.90%),data_driven
-hA,0.275,W/K,smartphone_parameters_detailed.csv (h*A_surf = 11 * 0.025),data_driven
-k_cal,1e-07,1/s,smartphone_parameters_detailed.csv (k_cal 1e-7 1/s),data_driven
-k_cycle,1.111e-08,1/(A*s),smartphone_parameters_detailed.csv (k_cycle 4e-5 1/Ah => /3600),data_driven
-m,0.225,kg,smartphone_parameters_detailed.csv (m),data_driven
-ocv_coeffs,"[4.2, 0.02, 0.4, 0.05, -0.03]",V,fit_params.py output placeholder (update with CALCE fit),data_driven
+A_area,0.0075,m^2,config.yaml (battery_params.A_area; used in current experiments),assumed
+Cp,900.0,J/(kg*K),config.yaml (battery_params.Cp; used in current experiments),assumed
+Ea_R,27538.0,J/mol,config.yaml (battery_params.Ea_R; used in current experiments),data_driven
+Ea_cap,10100.0,J/mol,config.yaml (battery_params.Ea_cap; used in current experiments),data_driven
+P_big_max,15.0,W,config.yaml (battery_params.P_big_max; used in current experiments),assumed
+P_idle,0.6,W,config.yaml (battery_params.P_idle; used in current experiments),assumed
+P_little_max,6.0,W,config.yaml (battery_params.P_little_max; used in current experiments),assumed
+P_max_scr,400.0,W/m^2,config.yaml (battery_params.P_max_scr; used in current experiments),assumed
+Q_design_ah,4.0,Ah,config.yaml (battery_params.Q_design_ah; used in current experiments),assumed
+R_ref,0.06,Ohm,config.yaml (battery_params.R_ref; used in current experiments),assumed
+T_throttle,318.15,K,config.yaml (battery_params.T_throttle; used in current experiments),assumed
+V_cutoff,3.0,V,config.yaml (battery_params.V_cutoff; used in current experiments),assumed
+eta_coulomb_ref,0.995,-,config.yaml (battery_params.eta_coulomb_ref; used in current experiments),assumed
+hA,1.8,W/K,config.yaml (battery_params.hA; used in current experiments),assumed
+k_cal,1.2e-09,1/s,config.yaml (battery_params.k_cal; used in current experiments),assumed
+k_cycle,1e-08,1/(A*s),config.yaml (battery_params.k_cycle; used in current experiments),assumed
+m,0.045,kg,config.yaml (battery_params.m; used in current experiments),assumed
+ocv_coeffs,"[3.1641369763126996, 0.013329434532685864, -0.9746467060946551, -0.22504836405236922, -0.024197927338674676]",V,config.yaml (battery_params.ocv_coeffs; used in current experiments),data_driven

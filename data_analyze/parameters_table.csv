@@ -1,48 +1,54 @@
 parameter,value,units,source
-A_area,"0.0114","m^2","smartphone_parameters_detailed.csv (A_scr 114 cm2)"
-Cp,"780","J/(kg*K)","smartphone_parameters_detailed.csv (C_p)"
-Ea_R,"2.754e+04","J/mol","derive_params.py (Panasonic 18650PF multi-temp fit)"
-Ea_cal,"5.000e+04","J/mol","model default (config.yaml; OSF aging data available)"
-Ea_cap,"1.010e+04","J/mol","derive_params.py (Panasonic 18650PF multi-temp fit)"
-P_big_max,"15","W","smartphone_parameters_detailed.csv (P_peak_cpu mapped to big cluster)"
-P_idle,"0.1","W","smartphone_parameters_detailed.csv (P_idle 0.1 W)"
-P_little_max,"6","W","smartphone_parameters_detailed.csv (P_game_avg mapped to little cluster)"
-P_max_scr,"394.7","W/m^2","smartphone_parameters_detailed.csv (P_max_scr 4.5 W / A_scr 0.0114 m2)"
-Q_design_ah,"5","Ah","smartphone_parameters_detailed.csv (2026, Q_design 5000 mAh)"
-R_gas,"8.314","J/(mol*K)","physical constant"
-R_ref,"0.03","Ohm","smartphone_parameters_detailed.csv (R_ref 30 m)"
-SOC_init,"1","-","config.yaml"
-SOH_init,"1","-","config.yaml"
-T_env,"298.1","K","config.yaml (baseline ambient)"
-T_init,"298.1","K","config.yaml"
-T_ref,"298.1","K","config.yaml (reference temperature)"
-T_throttle,"318.1","K","smartphone_parameters_detailed.csv (T_thresh 45C)"
-V_cutoff,"3","V","smartphone_parameters_detailed.csv (V_cutoff)"
-alpha_soc,"1.2","-","model default (config.yaml)"
-beta_stress,"12","1/V","model default (config.yaml)"
-charger_efficiency,"0.9","-","model default (config.yaml)"
-eta_coulomb_ref,"0.999","-","smartphone_parameters_detailed.csv (eta_coulomb 99.90%)"
-eta_coulomb_temp_coeff,"8.000e-04","1/K","model default (config.yaml)"
-gamma_scr,"1.5","-","model default (config.yaml)"
-gps_on_power,"0.5","W","recommended smartphone measured GPS (~0.4-0.6W)"
-hA,"0.275","W/K","smartphone_parameters_detailed.csv (h*A_surf = 11 * 0.025)"
-k_cal,"1.000e-07","1/s","smartphone_parameters_detailed.csv (k_cal 1e-7 1/s)"
-k_cycle,"1.111e-08","1/(A*s)","smartphone_parameters_detailed.csv (k_cycle 4e-5 1/Ah => /3600)"
-k_stress,"5.000e-10","1/s","model default (config.yaml)"
-kibam_c,"0.6","-","model default (config.yaml)"
-kibam_enabled,"True","bool","config.yaml"
-kibam_k,"3.000e-04","1/s","model default (config.yaml)"
-lpm_k,"20","-","model default (config.yaml)"
-lpm_min_factor,"0.7","-","model default (config.yaml)"
-lpm_soc_thresh,"0.2","-","model default (config.yaml)"
-m,"0.225","kg","smartphone_parameters_detailed.csv (m)"
-ocv_coeffs,"[4.2, 0.02, 0.4, 0.05, -0.03]","V","fit_params.py output placeholder (update with CALCE fit)"
-ocv_model,"combined","string","config.yaml (model choice)"
-r_soc_coeff,"2.5","-","model default (config.yaml)"
-r_soc_k,"7","-","model default (config.yaml)"
-r_soh_coeff,"1","-","model default (config.yaml)"
-throttle_k,"0.35","-","model default (config.yaml)"
-u_thresh,"0.45","-","model default (config.yaml)"
-v_stress_thresh,"4.1","V","model default (config.yaml)"
-wifi_active_power,"1.5","W","recommended smartphone measured active (~1.2-1.8W)"
-wifi_idle_power,"0.1","W","recommended smartphone measured idle (~0.1W)"
+A_area,0.0075,m^2,config.yaml (battery_params.A_area; used in current experiments)
+Cp,900.0,"J/(kg*K)",config.yaml (battery_params.Cp; used in current experiments)
+Ea_R,27538.0,J/mol,config.yaml (battery_params.Ea_R; used in current experiments)
+Ea_cal,50000.0,J/mol,config.yaml (battery_params.Ea_cal; used in current experiments)
+Ea_cap,10100.0,J/mol,config.yaml (battery_params.Ea_cap; used in current experiments)
+P_big_max,15.0,W,config.yaml (battery_params.P_big_max; used in current experiments)
+P_idle,0.6,W,config.yaml (battery_params.P_idle; used in current experiments)
+P_little_max,6.0,W,config.yaml (battery_params.P_little_max; used in current experiments)
+P_max_scr,400.0,W/m^2,config.yaml (battery_params.P_max_scr; used in current experiments)
+Q_design_ah,4.0,Ah,config.yaml (battery_params.Q_design_ah; used in current experiments)
+R_gas,8.314,"J/(mol*K)",config.yaml (battery_params.R_gas; used in current experiments)
+R_ref,0.06,Ohm,config.yaml (battery_params.R_ref; used in current experiments)
+SOC_init,1.0,-,config.yaml (battery_params.SOC_init; used in current experiments)
+SOH_init,1.0,-,config.yaml (battery_params.SOH_init; used in current experiments)
+T_env,298.15,K,config.yaml (battery_params.T_env; used in current experiments)
+T_init,298.15,K,config.yaml (battery_params.T_init; used in current experiments)
+T_ref,298.15,K,config.yaml (battery_params.T_ref; used in current experiments)
+T_throttle,318.15,K,config.yaml (battery_params.T_throttle; used in current experiments)
+V_cutoff,3.0,V,config.yaml (battery_params.V_cutoff; used in current experiments)
+alpha_soc,1.2,-,config.yaml (battery_params.alpha_soc; used in current experiments)
+beta_stress,12.0,1/V,config.yaml (battery_params.beta_stress; used in current experiments)
+c_polar,1200.0,F,config.yaml (battery_params.c_polar; used in current experiments)
+charger_efficiency,0.9,-,config.yaml (battery_params.charger_efficiency; used in current experiments)
+eta_coulomb_ref,0.995,-,config.yaml (battery_params.eta_coulomb_ref; used in current experiments)
+eta_coulomb_temp_coeff,0.0008,1/K,config.yaml (battery_params.eta_coulomb_temp_coeff; used in current experiments)
+gamma_scr,1.5,-,config.yaml (battery_params.gamma_scr; used in current experiments)
+gps_on_power,0.5,W,config.yaml (battery_params.gps_on_power; used in current experiments)
+hA,1.8,W/K,config.yaml (battery_params.hA; used in current experiments)
+k_cal,1.2e-09,1/s,config.yaml (battery_params.k_cal; used in current experiments)
+k_cycle,1.0e-08,"1/(A*s)",config.yaml (battery_params.k_cycle; used in current experiments)
+k_stress,5.0e-10,1/s,config.yaml (battery_params.k_stress; used in current experiments)
+kibam_c,0.6,-,config.yaml (battery_params.kibam_c; used in current experiments)
+kibam_enabled,true,bool,config.yaml (battery_params.kibam_enabled; used in current experiments)
+kibam_k,0.0003,1/s,config.yaml (battery_params.kibam_k; used in current experiments)
+lpm_k,20.0,-,config.yaml (battery_params.lpm_k; used in current experiments)
+lpm_min_factor,0.7,-,config.yaml (battery_params.lpm_min_factor; used in current experiments)
+lpm_soc_thresh,0.2,-,config.yaml (battery_params.lpm_soc_thresh; used in current experiments)
+m,0.045,kg,config.yaml (battery_params.m; used in current experiments)
+ocv_coeffs,"[3.1641369763126996, 0.013329434532685864, -0.9746467060946551, -0.22504836405236922, -0.024197927338674676]",V,config.yaml (battery_params.ocv_coeffs; used in current experiments)
+ocv_model,combined,string,config.yaml (battery_params.ocv_model; used in current experiments)
+ocv_temp_coeff,-0.0002,V/K,config.yaml (battery_params.ocv_temp_coeff; used in current experiments)
+ocv_temp_quad,-1e-06,V/K^2,config.yaml (battery_params.ocv_temp_quad; used in current experiments)
+ocv_temp_ref,298.15,K,config.yaml (battery_params.ocv_temp_ref; used in current experiments)
+r_polar,0.015,Ohm,config.yaml (battery_params.r_polar; used in current experiments)
+r_soc_coeff,2.5,-,config.yaml (battery_params.r_soc_coeff; used in current experiments)
+r_soc_k,7.0,-,config.yaml (battery_params.r_soc_k; used in current experiments)
+r_soh_coeff,1.0,-,config.yaml (battery_params.r_soh_coeff; used in current experiments)
+rc_enabled,true,bool,config.yaml (battery_params.rc_enabled; used in current experiments)
+throttle_k,0.35,-,config.yaml (battery_params.throttle_k; used in current experiments)
+u_thresh,0.45,-,config.yaml (battery_params.u_thresh; used in current experiments)
+v_stress_thresh,4.1,V,config.yaml (battery_params.v_stress_thresh; used in current experiments)
+wifi_active_power,1.5,W,config.yaml (battery_params.wifi_active_power; used in current experiments)
+wifi_idle_power,0.1,W,config.yaml (battery_params.wifi_idle_power; used in current experiments)

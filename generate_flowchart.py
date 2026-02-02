@@ -166,6 +166,24 @@ def create_scientific_diagram():
             dot.edge('P2_Merge', 'P2_Done', xlabel='RMSE < 1%')
             add_mini_plot(c, 'P2_Mini', 'icon_fitting.png', 'OCV Fit and Arrhenius')
             dot.edge('P2_Merge', 'P2_Mini', style='dashed')
+            # Iterative identification loop: validation drives re-fitting (feedback arrow).
+            dot.edge(
+                'P2_Merge',
+                'P2_L2',
+                style='dashed',
+                color='#8E24AA',
+                penwidth='1.4',
+                constraint='false',
+                xlabel='iterate',
+            )
+            dot.edge(
+                'P2_Merge',
+                'P2_R2',
+                style='dashed',
+                color='#8E24AA',
+                penwidth='1.4',
+                constraint='false',
+            )
 
         with stage.subgraph(name='cluster_S1_P1') as c:
             c.attr(label='Core Digital Twin Model', style='filled,rounded',
@@ -299,7 +317,8 @@ def create_scientific_diagram():
     dot.edge('P4_Solver', 'SP23', style='invis')
     dot.edge('SP23', 'P5_In', style='invis')
 
-    output_path = 'scientific_flowchart_v2'
+    # Render directly into the paper folder (referenced by T3P.tex as workflow.png).
+    output_path = r'D:\MCM-Article\workflow'
     dot.render(output_path, format='png', cleanup=True)
     print(f"Diagram generated: {output_path}.png")
 
